@@ -9,6 +9,7 @@
     "scrape": "node scripts/scrape.mjs"
   },
   "dependencies": {
+    "ai": "^7.0.34",
     "mcp-handler": "^1.0.2",
     "next": "^15.3.4",
     "react": "^19.1.0",

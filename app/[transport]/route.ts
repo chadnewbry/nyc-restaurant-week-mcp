@@ -4,47 +4,12 @@ import {
   searchRestaurants,
   findRestaurant,
   facets,
-  opentableUrl,
   weekForDate,
   WEEK_DATES,
-  type Restaurant,
 } from "@/lib/data";
+import { compact, full } from "@/lib/format";
 
 export const maxDuration = 60;
-
-function offerLine(r: Restaurant): string {
-  const weekday = r.offers.filter((o) => !o.sunday).map((o) => `$${o.price} ${o.meal}`);
-  const sunday = r.offers.filter((o) => o.sunday).map((o) => `$${o.price} ${o.meal}`);
-  let s = weekday.join(", ");
-  if (sunday.length) s += ` · Sunday: ${sunday.join(", ")}`;
-  return s;
-}
-
-function compact(r: Restaurant) {
-  return {
-    name: r.name,
-    slug: r.slug,
-    cuisines: r.cuisines,
-    location: `${r.neighborhood}, ${r.borough}`,
-    offers: offerLine(r),
-    weeks: r.weeks,
-    summary: r.summary,
-  };
-}
-
-function full(r: Restaurant) {
-  return {
-    ...compact(r),
-    offers_detail: r.offers,
-    weeks_detail: r.weeks.map((w) => WEEK_DATES[w]?.label ?? `Week ${w}`),
-    collections: r.collections,
-    accessibility: r.accessibility,
-    restaurant_week_menu_pdf: r.menuUrl,
-    website: r.website,
-    reserve_on_opentable: opentableUrl(r),
-    image: r.image,
-  };
-}
 
 const json = (data: unknown) => ({
   content: [{ type: "text" as const, text: JSON.stringify(data, null, 1) }],
@@ -145,11 +110,11 @@ const handler = createMcpHandler(
 );
 
 // A person opening /mcp in a browser sends GET + Accept: text/html — send them
-// to the landing page instead of a raw JSON-RPC "Method not allowed" error.
+// to the developer docs instead of a raw JSON-RPC "Method not allowed" error.
 // MCP clients (POST, or GET with event-stream Accept) still reach the handler.
 async function GET(req: Request) {
   if ((req.headers.get("accept") ?? "").includes("text/html")) {
-    return Response.redirect(new URL("/", req.url), 302);
+    return Response.redirect(new URL("/developers", req.url), 302);
   }
   return handler(req);
 }

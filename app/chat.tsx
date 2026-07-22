@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { RestaurantCard } from "@/lib/format";
+import { Rick } from "./rick";
 
 interface Msg {
   role: "user" | "assistant";
@@ -9,15 +10,18 @@ interface Msg {
   restaurants?: RestaurantCard[];
 }
 
-const GREETING =
-  "WELCOME, HUNGRY PLAYER 1. ASK ME ANYTHING ABOUT NYC RESTAURANT WEEK — CUISINE, NEIGHBORHOOD, PRICE, OR A DATE YOU WANT TO EAT.";
+const INTRO_LINES = [
+  "welcome to nyc restaurant week.",
+  "this is rick. resident rat.",
+  "he knows every kitchen in the city.",
+];
 
-const CHIPS = [
-  "sushi under $45",
-  "date night in Brooklyn",
-  "$30 lunch near Bryant Park",
-  "open on Sundays in Astoria",
-  "hidden gems",
+const EXAMPLES = [
+  "best restaurants for a date",
+  "cheap sushi in midtown",
+  "sunday brunch in brooklyn",
+  "$30 lunch near bryant park",
+  "somewhere fancy I can book on opentable",
 ];
 
 function Cards({ items }: { items: RestaurantCard[] }) {
@@ -26,16 +30,16 @@ function Cards({ items }: { items: RestaurantCard[] }) {
     <div className="chat-cards">
       {items.map((r) => (
         <div className="ccard" key={r.slug}>
-          {r.image ? <div className="img" style={{ backgroundImage: `url(${r.image})` }} /> : null}
-          <div className="b">
-            <div className="n">{r.name}</div>
-            <div className="m">{r.location}{r.cuisines.length ? ` · ${r.cuisines.join(", ")}` : ""}</div>
-            <div className="o">{r.offers}</div>
-            <div className="links">
-              {r.opentable ? <a href={r.opentable} target="_blank" rel="noreferrer">RESERVE</a> : null}
-              {r.menuUrl ? <a href={r.menuUrl} target="_blank" rel="noreferrer">MENU</a> : null}
-              {r.website ? <a href={r.website} target="_blank" rel="noreferrer">SITE</a> : null}
-            </div>
+          <div className="n">{r.name}</div>
+          <div className="m">
+            {r.location}
+            {r.cuisines.length ? ` · ${r.cuisines.join(", ")}` : ""}
+          </div>
+          <div className="o">{r.offers}</div>
+          <div className="links">
+            {r.opentable ? <a href={r.opentable} target="_blank" rel="noreferrer">reserve</a> : null}
+            {r.menuUrl ? <a href={r.menuUrl} target="_blank" rel="noreferrer">menu</a> : null}
+            {r.website ? <a href={r.website} target="_blank" rel="noreferrer">site</a> : null}
           </div>
         </div>
       ))}
@@ -43,14 +47,74 @@ function Cards({ items }: { items: RestaurantCard[] }) {
   );
 }
 
-export function Chat() {
-  const [msgs, setMsgs] = useState<Msg[]>([{ role: "assistant", content: GREETING }]);
-  const [input, setInput] = useState("");
-  const [busy, setBusy] = useState(false);
-  const bodyRef = useRef<HTMLDivElement>(null);
+function Intro({ onDone }: { onDone: () => void }) {
+  const [shown, setShown] = useState(0); // characters revealed across all lines
+  const total = INTRO_LINES.join("").length;
+  const complete = shown >= total;
 
   useEffect(() => {
-    bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: "smooth" });
+    if (complete) return;
+    const t = setInterval(() => setShown((s) => Math.min(s + 1, total)), 42);
+    return () => clearInterval(t);
+  }, [complete, total]);
+
+  const advance = useCallback(() => {
+    if (!complete) setShown(total);
+    else onDone();
+  }, [complete, total, onDone]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        advance();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [advance]);
+
+  let remaining = shown;
+  const lines = INTRO_LINES.map((l) => {
+    const part = l.slice(0, Math.max(0, remaining));
+    remaining -= l.length;
+    return part;
+  });
+
+  return (
+    <div className="stage" onClick={advance}>
+      <div className="glow" />
+      <Rick size={168} bob />
+      <div className="intro-lines">
+        {lines.map((l, i) => (
+          <div key={i} className={`intro-line${i > 0 ? " dim" : ""}`}>
+            {l}
+            {!complete && l.length > 0 && l.length < INTRO_LINES[i].length ? <span className="blink">█</span> : null}
+          </div>
+        ))}
+      </div>
+      {complete ? (
+        <div className="press-enter blink">[ press enter to continue ]</div>
+      ) : (
+        <div className="press-enter" style={{ opacity: 0.35 }}>[ press enter to skip ]</div>
+      )}
+    </div>
+  );
+}
+
+function Ask() {
+  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (msgs.length) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [msgs, busy]);
 
   async function send(text: string) {
@@ -64,34 +128,35 @@ export function Chat() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: next.map(({ role, content }) => ({ role, content })),
-        }),
+        body: JSON.stringify({ messages: next.map(({ role, content }) => ({ role, content })) }),
       });
       const data = await res.json();
       setMsgs((m) => [
         ...m,
-        { role: "assistant", content: data.reply ?? "GAME OVER — SOMETHING BROKE. TRY AGAIN.", restaurants: data.restaurants ?? [] },
+        {
+          role: "assistant",
+          content: (data.reply ?? "something broke in the kitchen. try again.").toLowerCase(),
+          restaurants: data.restaurants ?? [],
+        },
       ]);
     } catch {
-      setMsgs((m) => [...m, { role: "assistant", content: "CONNECTION LOST. INSERT COIN AND TRY AGAIN." }]);
+      setMsgs((m) => [...m, { role: "assistant", content: "lost the signal. try again in a sec." }]);
     } finally {
       setBusy(false);
+      inputRef.current?.focus();
     }
   }
 
   return (
-    <>
-      <div className="term pix">
-        <div className="term-bar">
-          CHEF-BOT v1.0 — NYC RESTAURANT WEEK TERMINAL
-          <div className="lights">
-            <span style={{ background: "var(--red)" }} />
-            <span style={{ background: "var(--yellow)" }} />
-            <span style={{ background: "var(--green)" }} />
-          </div>
-        </div>
-        <div className="term-body" ref={bodyRef}>
+    <div className="ask wrap">
+      <div className="ask-head">
+        <Rick size={64} />
+        <div className="ask-title">ask rick</div>
+      </div>
+      <div className="ask-sub">612 restaurant week spots. $30 / $45 / $60. jul 20 – sep 6.</div>
+
+      <div className="term">
+        <div className="term-body">
           {msgs.map((m, i) => (
             <div key={i}>
               <div className={`line ${m.role === "user" ? "user" : "bot"}`}>{m.content}</div>
@@ -100,10 +165,12 @@ export function Chat() {
           ))}
           {busy ? (
             <div className="line sys">
-              SEARCHING 612 RESTAURANTS<span className="blink">█</span>
+              rick is sniffing around<span className="blink">█</span>
             </div>
           ) : null}
+          <div ref={endRef} />
         </div>
+
         <form
           className="term-form"
           onSubmit={(e) => {
@@ -112,25 +179,51 @@ export function Chat() {
           }}
         >
           <input
+            ref={inputRef}
             className="term-input"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="type your craving... e.g. italian dinner in the west village thursday"
+            placeholder="search here..."
             maxLength={400}
-            aria-label="Ask about NYC Restaurant Week restaurants"
+            aria-label="Ask Rick about NYC Restaurant Week restaurants"
           />
           <button className="term-send" type="submit" disabled={busy}>
-            {busy ? "..." : "SEND"}
+            {busy ? "..." : "ask"}
           </button>
         </form>
+
+        {msgs.length === 0 ? (
+          <div className="examples">
+            <div className="ex-label">try:</div>
+            {EXAMPLES.map((e) => (
+              <button key={e} className="example" onClick={() => send(e)} disabled={busy}>
+                {e}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
-      <div className="chips">
-        {CHIPS.map((c) => (
-          <button className="chip" key={c} onClick={() => send(c)} disabled={busy}>
-            {c}
-          </button>
-        ))}
-      </div>
-    </>
+    </div>
   );
+}
+
+export function RickApp() {
+  const [entered, setEntered] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setEntered(sessionStorage.getItem("rick-entered") === "1");
+  }, []);
+
+  if (entered === null) return <div className="stage" />;
+  if (!entered) {
+    return (
+      <Intro
+        onDone={() => {
+          sessionStorage.setItem("rick-entered", "1");
+          setEntered(true);
+        }}
+      />
+    );
+  }
+  return <Ask />;
 }

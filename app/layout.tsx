@@ -6,13 +6,13 @@ const pressStart = Press_Start_2P({ weight: "400", subsets: ["latin"], variable:
 const vt323 = VT323({ weight: "400", subsets: ["latin"], variable: "--font-vt" });
 
 export const metadata: Metadata = {
-  title: "NYC Restaurant Week Quest — chat your way to 612 prix-fixe restaurants",
+  title: "ask rick — NYC Restaurant Week, guided by a resident rat",
   description:
-    "An 8-bit guide to NYC Restaurant Week Summer 2026. Chat with CHEF-BOT to search 612 participating restaurants by cuisine, price, neighborhood, and date — menus and OpenTable links included. Free MCP server for developers.",
+    "A minimal 8-bit guide to NYC Restaurant Week Summer 2026. Ask Rick, the resident rat, to search 612 participating restaurants by cuisine, price, neighborhood, and date — menus and OpenTable links included. Free MCP server for developers.",
   openGraph: {
-    title: "NYC Restaurant Week Quest",
+    title: "ask rick — NYC Restaurant Week",
     description:
-      "Press start to feast: chat-search all 612 NYC Restaurant Week restaurants. 8-bit style. Free MCP server included.",
+      "Rick the resident rat knows every kitchen in the city. Chat-search all 612 NYC Restaurant Week restaurants.",
   },
 };
 

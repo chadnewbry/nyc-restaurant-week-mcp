@@ -3,7 +3,7 @@ import Link from "next/link";
 import { CopyButton } from "../copy-button";
 
 export const metadata: Metadata = {
-  title: "MCP Server — NYC Restaurant Week Quest",
+  title: "MCP Server — ask rick",
   description:
     "Free open MCP server for NYC Restaurant Week Summer 2026. Connect Claude, Cursor, or any MCP client to 612 participating restaurants.",
 };
@@ -44,11 +44,11 @@ export default function Developers() {
         </h1>
         <div className="tag">LEVEL 2: CONNECT YOUR AI <span className="blink">█</span></div>
         <p className="sub">
-          The same data behind CHEF-BOT, as a free open MCP server. Streamable HTTP, no auth, no API key.
+          The same data behind Rick, as a free open MCP server. Streamable HTTP, no auth, no API key.
           One URL and your assistant can search every NYC Restaurant Week menu.
         </p>
         <div style={{ marginTop: 22 }}>
-          <Link className="px-btn ghost" href="/">← Back to the arcade</Link>
+          <Link className="px-btn ghost" href="/">← back to rick</Link>
         </div>
       </div>
 

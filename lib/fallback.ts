@@ -43,6 +43,15 @@ export function parseQuery(text: string): SearchParams {
   const week = t.match(/\bweek\s*([1-7])\b/);
   if (week) p.week = Number(week[1]);
 
+  if (/\b(date|dates|romantic|anniversary)\b/.test(t)) p.collection = "date-night";
+  else if (/\bhidden\b|\bgem/.test(t)) p.collection = "hidden-gems";
+  else if (/\bceleb/.test(t)) p.collection = "celebrity-chefs";
+  else if (/\b(fancy|dress|upscale|fine dining)\b/.test(t)) p.collection = "dress-for-the-occasion";
+  else if (/\bfoodie/.test(t)) p.collection = "for-the-foodies";
+  else if (/\bclassic/.test(t)) p.collection = "classic-restaurants";
+
+  if (/\bopentable\b|\breserve\b|\breservation/.test(t)) p.bookable_on_opentable = true;
+
   return p;
 }
 
@@ -53,11 +62,14 @@ export function fallbackAnswer(text: string) {
     .filter(([k, v]) => v !== undefined && k !== "limit")
     .map(([k, v]) => `${k}=${v}`)
     .join(" ");
+  const noFilters = !applied;
   return {
     reply:
       total === 0
-        ? "NO MATCHES FOUND. TRY A CUISINE (ITALIAN, SUSHI, STEAKHOUSE...), A NEIGHBORHOOD, OR A PRICE ($30 / $45 / $60)."
-        : `FOUND ${total} MATCH${total === 1 ? "" : "ES"}${applied ? ` FOR ${applied.toUpperCase()}` : ""}. TOP PICKS BELOW.`,
+        ? "no matches. try a cuisine (italian, sushi, steakhouse...), a neighborhood, or a price ($30 / $45 / $60)."
+        : noFilters
+          ? `that's the whole menu — ${total} spots. narrow it down with a cuisine, neighborhood, or price and i'll dig in. a few favorites below.`
+          : `found ${total} match${total === 1 ? "" : "es"}${applied ? ` for ${applied.toLowerCase()}` : ""}. picks below.`,
     items,
     total,
   };

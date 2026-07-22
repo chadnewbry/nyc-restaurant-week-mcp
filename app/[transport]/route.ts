@@ -144,4 +144,14 @@ const handler = createMcpHandler(
   }
 );
 
-export { handler as GET, handler as POST, handler as DELETE };
+// A person opening /mcp in a browser sends GET + Accept: text/html — send them
+// to the landing page instead of a raw JSON-RPC "Method not allowed" error.
+// MCP clients (POST, or GET with event-stream Accept) still reach the handler.
+async function GET(req: Request) {
+  if ((req.headers.get("accept") ?? "").includes("text/html")) {
+    return Response.redirect(new URL("/", req.url), 302);
+  }
+  return handler(req);
+}
+
+export { GET, handler as POST, handler as DELETE };

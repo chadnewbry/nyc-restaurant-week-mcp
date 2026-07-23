@@ -143,14 +143,18 @@ export function MapView({ pins }: { pins: MapPin[] }) {
   const [q, setQ] = useState("");
 
   const matched = useMemo(() => {
-    const terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    if (!terms.length) return null;
-    // Every word must match somewhere: "pizza brooklyn" = pizza places in brooklyn.
-    return pins.filter((p) => {
-      const hay =
-        `${p.name} ${p.cuisines.join(" ")} ${p.location} ${p.address ?? ""} ${p.offers}`.toLowerCase();
-      return terms.every((t) => hay.includes(t));
-    });
+    const raw = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!raw.length) return null;
+    const hays = pins.map((p) => ({
+      p,
+      hay: `${p.name} ${p.cuisines.join(" ")} ${p.location} ${p.address ?? ""} ${p.offers}`.toLowerCase(),
+    }));
+    // Every meaningful word must match: "pizza brooklyn" = pizza in brooklyn.
+    // But drop filler words that match nothing (a conversational "date night in
+    // hudson yards" narrows to "hudson yards" instead of returning zero).
+    let terms = raw.filter((t) => hays.some((h) => h.hay.includes(t)));
+    if (!terms.length) terms = raw; // nothing matched at all — show the empty state
+    return hays.filter((h) => terms.every((t) => h.hay.includes(t))).map((h) => h.p);
   }, [q, pins]);
 
   const setActiveLine = useCallback((next: string | null) => {

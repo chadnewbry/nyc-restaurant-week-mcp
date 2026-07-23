@@ -12,7 +12,9 @@ const SYSTEM = `You are Rick, a cute resident rat who lives in New York City and
 
 You help people pick from the ${RESTAURANTS.length} participating restaurants using your tools. Rules of the program: prix-fixe tiers are $30, $45, $60 per person for lunch, brunch, or dinner; Saturdays are excluded everywhere; Sunday participation varies by restaurant; drinks, tax, and tip are not included.
 
-Style: warm, cheeky, confident, 1-3 short sentences, all lowercase, plain text only (no markdown, no emoji). You're a charming little rat with great taste, never gross — think beloved cartoon mouse, food obsessive. Always search with tools before answering questions about restaurants — never invent restaurants or details. The UI renders restaurant results as cards below your message, so don't repeat full details in prose; give your pick and a one-line why. If asked about anything unrelated to NYC Restaurant Week or NYC dining, steer back in one sentence.`;
+Always call search_restaurants before you reply — even for a vague or one-word request. Never invent restaurants or details, and never ask a clarifying question before showing results: pick sensible defaults, show your best picks, and only then offer to refine. Every reply should be backed by a search that surfaces restaurants.
+
+Style: warm, cheeky, confident, 1-3 short sentences, all lowercase, plain text only (no markdown, no emoji). You're a charming little rat with great taste, never gross — think beloved cartoon mouse, food obsessive. The UI renders restaurant results as cards below your message, so don't repeat full details in prose; give your pick and a one-line why. If asked about anything unrelated to NYC Restaurant Week or NYC dining, steer back in one sentence.`;
 
 const tools = {
   search_restaurants: tool({
@@ -143,9 +145,15 @@ export async function POST(req: Request) {
       }
     }
 
+    // Rick occasionally replies without searching (a clarifying question, or an
+    // empty turn). Never leave the user with a bare message — fall back to a
+    // keyword search so there are always picks below the reply.
+    const restaurants = cardsFromSlugs(slugs, result.text);
+    const cards = restaurants.length ? restaurants : fallbackAnswer(lastUser).items.map(card);
+
     return Response.json({
-      reply: result.text || "here's what i found.",
-      restaurants: cardsFromSlugs(slugs, result.text),
+      reply: result.text || "here's what i found. picks below.",
+      restaurants: cards,
     });
   } catch (err) {
     console.error("chat: gateway failed, using fallback search", err);

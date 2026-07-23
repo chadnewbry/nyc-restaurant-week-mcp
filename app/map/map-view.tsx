@@ -14,7 +14,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MAP_STYLE } from "@/lib/map-style";
 import { haversine, planRide, type LngLat, type SubwayData } from "@/lib/subway";
 import { Rick } from "../rick";
-import { BIKE, CAB, CHEF, RAT_RUN, TRAIN, spriteHTML } from "./sprites";
+
+// ---- marker sprites -------------------------------------------------------
+// Rat: Downloads sprite sheet (48px grid; white rat = columns 9-11, side-walk
+// frames on rows 1-2, top-down idle on row 0). Faces LEFT natively.
+// Vehicles: Kenney Pixel Vehicle Pack (CC0). Face RIGHT natively.
+const RAT_COL0 = 9; // white variant
+const HAT_SVG = `<svg class="hat" width="22" height="16" viewBox="0 0 11 8" shape-rendering="crispEdges"><rect x="2" y="0" width="7" height="2" fill="#f2e9dc"/><rect x="1" y="2" width="9" height="2" fill="#f2e9dc"/><rect x="2" y="4" width="7" height="3" fill="#f2e9dc"/><rect x="2" y="7" width="7" height="1" fill="#b5aa9a"/></svg>`;
+
+function ratWalkHTML(frame: number, movingLeft: boolean, opacity = 1): string {
+  const col = RAT_COL0 + (frame % 3);
+  const row = frame % 6 < 3 ? 1 : 2;
+  return `<div class="spr rat${movingLeft ? "" : " flip"}" style="background-position:-${col * 48}px -${row * 48}px;opacity:${opacity}"></div>`;
+}
+
+function ratIdleHTML(hat: boolean): string {
+  return `<div class="spr rat" style="background-position:-${(RAT_COL0 + 1) * 48}px 0">${hat ? HAT_SVG : ""}</div>`;
+}
+
+function vehicleHTML(src: string, w: number, h: number, movingLeft: boolean): string {
+  return `<img class="spr veh${movingLeft ? " flip" : ""}" src="${src}" width="${w * 2}" height="${h * 2}" alt=""/>`;
+}
 
 export interface MapPin {
   slug: string;
@@ -105,17 +125,21 @@ export function MapView({ pins }: { pins: MapPin[] }) {
   const planningRef = useRef(false);
 
   const [focus, setFocus] = useState<MapPin | null>(null);
+  const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<Mode>("walk");
   const [frame, setFrame] = useState(0);
   const [status, setStatus] = useState("rick is checking the service alerts...");
   const [q, setQ] = useState("");
 
   const matched = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return null;
-    return pins.filter((p) =>
-      `${p.name} ${p.cuisines.join(" ")} ${p.location} ${p.offers}`.toLowerCase().includes(term)
-    );
+    const terms = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) return null;
+    // Every word must match somewhere: "pizza brooklyn" = pizza places in brooklyn.
+    return pins.filter((p) => {
+      const hay =
+        `${p.name} ${p.cuisines.join(" ")} ${p.location} ${p.address ?? ""} ${p.offers}`.toLowerCase();
+      return terms.every((t) => hay.includes(t));
+    });
   }, [q, pins]);
 
   const setActiveLine = useCallback((line: string | null) => {
@@ -323,12 +347,13 @@ export function MapView({ pins }: { pins: MapPin[] }) {
       // Rick.
       const el = document.createElement("div");
       el.className = "rick-marker";
-      el.innerHTML = spriteHTML(RAT_RUN[0]);
+      el.innerHTML = ratIdleHTML(false);
       markerElRef.current = el;
       markerRef.current = new Marker({ element: el, anchor: "bottom" })
         .setLngLat(posRef.current)
         .addTo(map);
 
+      setReady(true);
       timerRef.current = setTimeout(() => startJourney(randomPin()), 1500);
     });
 
@@ -387,6 +412,21 @@ export function MapView({ pins }: { pins: MapPin[] }) {
     return () => cancelAnimationFrame(raf);
   }, [applyLeg, randomPin, setActiveLine, startJourney]);
 
+  // Search drives the map: only matching pins stay visible, and the view
+  // frames them so results are immediately obvious.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || !map.getLayer("pins")) return;
+    if (matched && matched.length) {
+      map.setFilter("pins", ["in", ["get", "slug"], ["literal", matched.map((p) => p.slug)]]);
+      const b = new LngLatBounds([matched[0].lng, matched[0].lat], [matched[0].lng, matched[0].lat]);
+      for (const p of matched) b.extend([p.lng, p.lat]);
+      map.fitBounds(b, { padding: 80, duration: 700, maxZoom: 14 });
+    } else {
+      map.setFilter("pins", null);
+    }
+  }, [matched, ready]);
+
   // Focus → send Rick there.
   useEffect(() => {
     focusRef.current = focus;
@@ -394,15 +434,18 @@ export function MapView({ pins }: { pins: MapPin[] }) {
     if (focus) {
       journeyRef.current = null;
       startJourney(focus);
+      setTimeout(() => {
+        document.querySelector(".map-focus")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 350);
     } else {
       timerRef.current = setTimeout(() => startJourney(randomPin()), 2000);
     }
   }, [focus, startJourney, randomPin]);
 
-  // Leg/pedal frames while moving.
+  // Walk-cycle frames while moving (6-frame cycle across the sheet's two rows).
   useEffect(() => {
-    if (mode !== "walk" && mode !== "bike") return;
-    const t = setInterval(() => setFrame((f) => f ^ 1), 150);
+    if (mode !== "walk" && mode !== "ride") return;
+    const t = setInterval(() => setFrame((f) => (f + 1) % 6), 140);
     return () => clearInterval(t);
   }, [mode]);
 
@@ -410,13 +453,13 @@ export function MapView({ pins }: { pins: MapPin[] }) {
   useEffect(() => {
     const el = markerElRef.current;
     if (!el) return;
-    const grid =
-      mode === "walk" ? RAT_RUN[frame]
-      : mode === "bike" ? BIKE[frame]
-      : mode === "cab" ? CAB[0]
-      : mode === "ride" ? TRAIN[0]
-      : CHEF[0];
-    el.innerHTML = spriteHTML(grid, 3, flipRef.current && mode !== "chef");
+    const left = flipRef.current;
+    el.innerHTML =
+      mode === "walk" ? ratWalkHTML(frame, left)
+      : mode === "ride" ? ratWalkHTML(frame, left, 0.55) // underground
+      : mode === "bike" ? vehicleHTML("/sprites/cycle.png", 16, 10, left)
+      : mode === "cab" ? vehicleHTML("/sprites/taxi.png", 33, 14, left)
+      : ratIdleHTML(true);
   }, [mode, frame]);
 
   return (

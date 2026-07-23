@@ -112,7 +112,7 @@ export default function Developers() {
           <div className="fine">
             Data from public listings at{" "}
             <a href="https://www.nyctourism.com/restaurant-week/" target="_blank" rel="noreferrer">nyctourism.com/restaurant-week</a>,
-            refreshed periodically. Always confirm details with the restaurant.
+            refreshed daily. Always confirm details with the restaurant.
           </div>
         </div>
       </footer>

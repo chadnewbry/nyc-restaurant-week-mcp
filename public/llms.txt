@@ -1,0 +1,32 @@
+# ask rick — NYC Restaurant Week
+
+> An unofficial guide to NYC Restaurant Week Summer 2026 (July 20 – September 6). Chat with Rick the resident rat to search all 612 participating restaurants by cuisine, borough, neighborhood, price tier ($30/$45/$60 prix fixe), meal, and date — with menu PDFs and OpenTable reservation links. Also a free, open MCP server for AI agents.
+
+Not affiliated with NYC Tourism + Conventions or NYC Restaurant Week®. Data is scraped daily from the public program API behind nyctourism.com/restaurant-week. Always confirm prices and participation with the restaurant.
+
+## MCP server (for AI agents)
+
+Connect directly instead of scraping this site:
+
+- Endpoint: https://nyc-restaurant-week-mcp.vercel.app/mcp (Streamable HTTP, no auth, no API key)
+- Claude Code: `claude mcp add --transport http nyc-restaurant-week https://nyc-restaurant-week-mcp.vercel.app/mcp`
+
+Tools:
+
+- search_restaurants: filter by query, cuisine, borough, neighborhood, price, meal, week, exact date, collection. Paginated.
+- get_restaurant: full detail by slug or name, including menu PDF and OpenTable link.
+- check_date: whether Restaurant Week is on for a date, which program week, Saturday/Sunday rules.
+- list_filters: all filter values with participant counts.
+
+## Pages
+
+- [Home](https://nyc-restaurant-week-mcp.vercel.app/): chat with Rick to find a restaurant
+- [Map](https://nyc-restaurant-week-mcp.vercel.app/map): every participating restaurant on a live NYC map with subway lines
+- [MCP setup](https://nyc-restaurant-week-mcp.vercel.app/developers): install instructions for Claude, Cursor, and any MCP client
+
+## Program rules
+
+- Summer 2026 runs July 20 – September 6.
+- Prix-fixe tiers are $30, $45, or $60 per person for lunch, brunch, or dinner.
+- Saturdays are excluded everywhere; Sunday participation varies by restaurant.
+- Drinks, tax, and tip are not included.

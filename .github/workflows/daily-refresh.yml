@@ -1,14 +1,14 @@
-# Weekly data refresh: re-scrape the program API, geocode any new restaurants
+# Daily data refresh: re-scrape the program API, geocode any new restaurants
 # (detail-page coordinates with a Nominatim name-search fallback), commit the
 # updated data, and redeploy to Vercel.
 #
 # Requires one repo secret: VERCEL_TOKEN (create at vercel.com/account/tokens,
 # add under Settings → Secrets and variables → Actions).
-name: weekly-refresh
+name: daily-refresh
 
 on:
   schedule:
-    - cron: "0 9 * * 1" # Mondays 09:00 UTC
+    - cron: "0 9 * * *" # daily 09:00 UTC (~4-5am New York)
   workflow_dispatch: {}
 
 permissions:
@@ -37,7 +37,7 @@ jobs:
             echo "No data changes."
           else
             git add data/restaurants.json
-            git commit -m "Weekly data refresh: restaurants + geocoding"
+            git commit -m "Daily data refresh: restaurants + geocoding"
             git push
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi

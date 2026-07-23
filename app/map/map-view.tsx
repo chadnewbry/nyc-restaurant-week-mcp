@@ -44,6 +44,97 @@ function subwayHTML(line: string | null, movingLeft: boolean): string {
   return vehicleHTML(`/sprites/subway/${hex}.png`, 50, 24, movingLeft);
 }
 
+// A plain emoji glyph as a marker (used for Rick's citibike). Apple's 🚲 faces
+// left like the rat, so flip when he's heading right.
+function emojiSpriteHTML(emoji: string, px: number, movingLeft: boolean, facesLeft = true): string {
+  const flip = facesLeft ? !movingLeft : movingLeft;
+  return `<span class="spr emoji-spr${flip ? " flip" : ""}" style="font-size:${px}px">${emoji}</span>`;
+}
+
+// ---- cuisine emoji --------------------------------------------------------
+// One emoji per cuisine; a restaurant takes the first of its cuisines we know.
+const CUISINE_EMOJI: Record<string, string> = {
+  Italian: "🍝",
+  "American (New)": "🍽️",
+  Steakhouse: "🥩",
+  French: "🥐",
+  "Japanese / Sushi": "🍣",
+  Mediterranean: "🫒",
+  Seafood: "🦞",
+  "Asian Fusion": "🥢",
+  Chinese: "🥡",
+  Korean: "🍲",
+  Thai: "🍜",
+  "American (Traditional)": "🍗",
+  Mexican: "🌮",
+  Greek: "🥙",
+  Indian: "🍛",
+  "Bars/Cocktails": "🍸",
+  Eclectic: "🍴",
+  "Latin American": "🫔",
+  "Middle Eastern": "🧆",
+  Spanish: "🥘",
+  Brazilian: "🍖",
+  Pizza: "🍕",
+  Caribbean: "🌴",
+  Irish: "🍺",
+  Gastropub: "🍻",
+  Continental: "🍽️",
+  Vegetarian: "🥗",
+  Turkish: "🌯",
+  "Eastern European": "🥟",
+  Argentinian: "🍷",
+  Cuban: "🥪",
+  Barbecue: "🍖",
+  "Pan-Asian": "🥢",
+  Peruvian: "🐟",
+  "Cajun/Creole": "🦐",
+  Burgers: "🍔",
+  "Modern European": "🍽️",
+  Vegan: "🌱",
+  Vietnamese: "🥖",
+  "Soul Food / Southern": "🍗",
+  Delicatessen: "🥪",
+  "Puerto Rican": "🍤",
+  Ethiopian: "🫓",
+  Jamaican: "🌶️",
+  Malaysian: "🍜",
+  Filipino: "🍢",
+  Hawaiian: "🍍",
+  Moroccan: "🫖",
+  Southwestern: "🌵",
+  Russian: "🥃",
+  Ukrainian: "🌻",
+  Austrian: "🥨",
+};
+
+function emojiFor(cuisines: string[]): string {
+  for (const c of cuisines) if (CUISINE_EMOJI[c]) return CUISINE_EMOJI[c];
+  return "🍴";
+}
+
+// Draw a cuisine emoji onto a cream-ringed dark coin, so it reads on any part
+// of the basemap and still feels like the old dot. Returned as ImageData for
+// map.addImage (registered once per distinct emoji).
+function emojiCoin(emoji: string, size = 48): ImageData {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const c = size / 2;
+  ctx.beginPath();
+  ctx.arc(c, c, size * 0.46, 0, Math.PI * 2);
+  ctx.fillStyle = "#0d0b08";
+  ctx.fill();
+  ctx.lineWidth = size * 0.05;
+  ctx.strokeStyle = "#f2e9dc";
+  ctx.stroke();
+  ctx.font = `${Math.round(size * 0.56)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(emoji, c, c + size * 0.04);
+  return ctx.getImageData(0, 0, size, size);
+}
+
 export interface MapPin {
   slug: string;
   name: string;
@@ -332,27 +423,31 @@ export function MapView({ pins }: { pins: MapPin[] }) {
         },
       });
 
-      // Restaurant pins.
+      // Restaurant pins: a cuisine emoji coin per spot.
       map.addSource("restaurants", {
         type: "geojson",
         data: {
           type: "FeatureCollection",
           features: pins.map((p) => ({
             type: "Feature" as const,
-            properties: { slug: p.slug, name: p.name },
+            properties: { slug: p.slug, name: p.name, emoji: emojiFor(p.cuisines) },
             geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
           })),
         },
       });
+      for (const em of new Set(pins.map((p) => emojiFor(p.cuisines)))) {
+        if (!map.hasImage(em)) map.addImage(em, emojiCoin(em), { pixelRatio: 2 });
+      }
       map.addLayer({
         id: "pins",
-        type: "circle",
+        type: "symbol",
         source: "restaurants",
-        paint: {
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 2.5, 14, 5.5],
-          "circle-color": "#f2e9dc",
-          "circle-stroke-color": "#000000",
-          "circle-stroke-width": 1,
+        layout: {
+          "icon-image": ["get", "emoji"],
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+          // Coins grow with zoom — roughly double from mid to close zoom.
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 9, 0.34, 13, 0.5, 16, 1.0],
         },
       });
 
@@ -497,7 +592,7 @@ export function MapView({ pins }: { pins: MapPin[] }) {
     el.innerHTML =
       mode === "walk" ? ratWalkHTML(frame, left)
       : mode === "ride" ? subwayHTML(line, left)
-      : mode === "bike" ? vehicleHTML("/sprites/cycle.png", 16, 10, left)
+      : mode === "bike" ? emojiSpriteHTML("🚲", 30, left)
       : mode === "cab" ? vehicleHTML("/sprites/taxi.png", 33, 14, left)
       : ratIdleHTML(true);
   }, [mode, frame, line]);

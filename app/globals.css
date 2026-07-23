@@ -403,6 +403,8 @@ pre.block {
 .rick-marker .rat { width: 48px; height: 48px; background-image: url(/sprites/rats.png); }
 .rick-marker .flip { transform: scaleX(-1); }
 .rick-marker .hat { position: absolute; top: -6px; left: 13px; }
+.rick-marker .emoji-spr { image-rendering: auto; line-height: 1; animation: veh-bob 0.5s steps(2) infinite; }
+.rick-marker .emoji-spr.flip { animation: veh-bob-flip 0.5s steps(2) infinite; }
 .rick-marker .veh { animation: veh-bob 0.5s steps(2) infinite; }
 @keyframes veh-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(1px); } }
 .rick-marker .veh.flip { animation: veh-bob-flip 0.5s steps(2) infinite; }

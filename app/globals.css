@@ -34,6 +34,32 @@ body::after {
 
 .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
 
+/* ---------- top nav ---------- */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #000;
+  border-bottom: 1px solid var(--faint);
+}
+
+.topnav-in { max-width: 760px; margin: 0 auto; display: flex; }
+
+.topnav .tab {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-pixel);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  text-decoration: none;
+  padding: 17px 0 15px;
+}
+
+.topnav .tab:hover { color: var(--ink); }
+.topnav .tab.active { background: var(--ink); color: #000; }
+
 a { color: var(--ink); }
 
 ::selection { background: var(--ink); color: #000; }
@@ -43,7 +69,7 @@ a { color: var(--ink); }
 
 /* ---------- intro ---------- */
 .stage {
-  min-height: 100svh;
+  min-height: calc(100svh - 45px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -212,8 +238,8 @@ a { color: var(--ink); }
 .ccard .n { font-family: var(--font-pixel); font-size: 10.5px; line-height: 1.7; text-transform: uppercase; }
 .ccard .m { color: var(--dim); margin-top: 5px; }
 .ccard .o { color: var(--ink); margin-top: 2px; }
-.ccard .links { margin-top: 8px; display: flex; gap: 14px; flex-wrap: wrap; font-size: 16px; }
-.ccard .links a { color: var(--dim); text-decoration: none; border-bottom: 1px dotted var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
+.ccard .links { margin-top: 8px; display: flex; gap: 16px; flex-wrap: wrap; font-size: 16px; }
+.ccard .links a { display: inline-block; padding: 4px 0; color: var(--dim); text-decoration: none; border-bottom: 1px dotted var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
 .ccard .links a:hover { color: var(--ink); border-color: var(--ink); }
 
 /* ---------- shared (developers page) ---------- */
@@ -318,11 +344,11 @@ pre.block {
 /* ---------- map page ---------- */
 .map-page { padding: 44px 0 70px; max-width: 860px; }
 
-.map-nav { text-align: center; margin-top: 10px; font-size: 18px; }
-.map-nav a, .ask-sub a { color: var(--dim); text-decoration: none; }
-.map-nav a:hover, .ask-sub a:hover { color: var(--ink); }
-
 .map-page .term-form { margin-top: 24px; }
+
+@media (pointer: fine) {
+  .touch-hint { display: none; }
+}
 .map-results { margin-top: 10px; }
 .map-status { margin: 14px 0 10px; min-height: 1.5em; }
 
@@ -374,6 +400,13 @@ pre.block {
 .map-canvas .maplibregl-ctrl-group button + button { border-top: 1px solid var(--faint); }
 .map-canvas .maplibregl-ctrl-group button span { filter: invert(1); }
 
+.map-canvas .maplibregl-cooperative-gesture-screen {
+  font-family: var(--font-term);
+  font-size: 19px;
+  background: rgba(0, 0, 0, 0.75);
+  color: var(--ink);
+}
+
 .map-focus { margin-top: 16px; }
 .map-focus .roam { margin-top: 8px; }
 
@@ -383,6 +416,33 @@ footer .pixel-note { font-family: var(--font-pixel); font-size: 8px; color: var(
 footer a { color: var(--dim); }
 footer .fine { max-width: 72ch; margin: 8px auto 0; line-height: 1.65; }
 
+/* ---------- mobile-first adjustments ---------- */
 @media (max-width: 640px) {
   body { font-size: 19px; }
+
+  .stage { padding: 24px 16px; }
+  .intro-lines { margin-top: 28px; min-height: 110px; }
+
+  .ask { padding: 26px 0 52px; }
+  .ask-head { gap: 12px; }
+  .hero { padding: 40px 0 12px; }
+  section { padding: 28px 0 8px; }
+  footer { margin-top: 40px; padding: 24px 0 36px; }
+
+  .term { margin-top: 22px; }
+  .term-input { padding: 12px 12px; font-size: 19px; }
+  .term-send { padding: 0 16px; }
+  .example { padding: 9px 0; font-size: 19px; }
+  .examples { margin-top: 16px; }
+
+  .ccard { padding: 12px 14px; font-size: 17px; }
+  .ccard .photo { width: calc(100% + 28px); margin: -12px -14px 10px; height: 110px; }
+
+  .map-page { padding: 22px 0 44px; }
+  .map-page .term-form { margin-top: 16px; }
+  .map-canvas { height: 56svh; min-height: 340px; }
+  .map-status { margin: 10px 0 8px; font-size: 17px; }
+
+  .cmd { font-size: 16px; padding: 10px 12px; }
+  pre.block { font-size: 15px; }
 }

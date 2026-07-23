@@ -232,6 +232,9 @@ export function MapView({ pins }: { pins: MapPin[] }) {
         [-73.4, 41.05],
       ],
       attributionControl: { compact: true },
+      // On touch devices, one finger scrolls the page; two fingers pan the
+      // map — otherwise the map swallows every scroll gesture on mobile.
+      cooperativeGestures: window.matchMedia("(pointer: coarse)").matches,
     });
     mapRef.current = map;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -469,7 +472,7 @@ export function MapView({ pins }: { pins: MapPin[] }) {
         <div className="ask-title">rick&apos;s map</div>
       </div>
       <div className="ask-sub">
-        {pins.length} spots pinned. <a href="/">[ ask rick ]</a>
+        {pins.length} spots pinned. <span className="touch-hint">two fingers to pan.</span>
       </div>
 
       <form

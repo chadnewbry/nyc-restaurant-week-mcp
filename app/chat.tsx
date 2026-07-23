@@ -99,9 +99,9 @@ function Intro({ onDone }: { onDone: () => void }) {
         ))}
       </div>
       {complete ? (
-        <div className="press-enter blink">[ press enter to continue ]</div>
+        <div className="press-enter blink">[ tap or press enter ]</div>
       ) : (
-        <div className="press-enter" style={{ opacity: 0.35 }}>[ press enter to skip ]</div>
+        <div className="press-enter" style={{ opacity: 0.35 }}>[ tap to skip ]</div>
       )}
     </div>
   );
@@ -159,9 +159,6 @@ function Ask() {
         <div className="ask-title">ask rick</div>
       </div>
       <div className="ask-sub">612 restaurant week spots. $30 / $45 / $60. jul 20 – sep 6.</div>
-      <div className="map-nav">
-        <a href="/map">[ watch rick run the map ]</a>
-      </div>
 
       <div className="term">
         <div className="term-body">

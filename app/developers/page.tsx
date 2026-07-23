@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { CopyButton } from "../copy-button";
 
 export const metadata: Metadata = {
@@ -47,9 +46,6 @@ export default function Developers() {
           The same data behind Rick, as a free open MCP server. Streamable HTTP, no auth, no API key.
           One URL and your assistant can search every NYC Restaurant Week menu.
         </p>
-        <div style={{ marginTop: 22 }}>
-          <Link className="px-btn ghost" href="/">← back to rick</Link>
-        </div>
       </div>
 
       <div className="dev-wrap">

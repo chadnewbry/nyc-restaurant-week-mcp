@@ -1,9 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Press_Start_2P, VT323 } from "next/font/google";
 import "./globals.css";
+import { Nav } from "./nav";
 
 const pressStart = Press_Start_2P({ weight: "400", subsets: ["latin"], variable: "--font-press" });
 const vt323 = VT323({ weight: "400", subsets: ["latin"], variable: "--font-vt" });
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://nyc-restaurant-week-mcp.vercel.app"),
@@ -30,7 +37,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${pressStart.variable} ${vt323.variable}`}>
-      <body>{children}</body>
+      <body>
+        <Nav />
+        {children}
+      </body>
     </html>
   );
 }

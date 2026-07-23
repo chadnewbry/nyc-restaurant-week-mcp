@@ -3,15 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/copy-maplibre-worker.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/copy-maplibre-worker.mjs",
     "build": "next build",
     "start": "next start",
     "scrape": "node scripts/scrape.mjs",
     "geocode": "node scripts/geocode.mjs",
-    "makemap": "node scripts/make-map.mjs"
+    "subway": "node scripts/subway.mjs"
   },
   "dependencies": {
     "ai": "^7.0.34",
+    "maplibre-gl": "^6.0.0",
     "mcp-handler": "^1.0.2",
     "next": "^15.3.4",
     "react": "^19.1.0",

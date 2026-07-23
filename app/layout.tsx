@@ -6,10 +6,21 @@ const pressStart = Press_Start_2P({ weight: "400", subsets: ["latin"], variable:
 const vt323 = VT323({ weight: "400", subsets: ["latin"], variable: "--font-vt" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://nyc-restaurant-week-mcp.vercel.app"),
   title: "ask rick — NYC Restaurant Week, guided by a resident rat",
   description:
     "A minimal 8-bit guide to NYC Restaurant Week Summer 2026. Ask Rick, the resident rat, to search 612 participating restaurants by cuisine, price, neighborhood, and date — menus and OpenTable links included. Free MCP server for developers.",
   openGraph: {
+    title: "ask rick — NYC Restaurant Week",
+    description:
+      "Rick the resident rat knows every kitchen in the city. Chat-search all 612 NYC Restaurant Week restaurants, or watch him ride the subway to your pick on the live map.",
+    url: "/",
+    siteName: "ask rick",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
     title: "ask rick — NYC Restaurant Week",
     description:
       "Rick the resident rat knows every kitchen in the city. Chat-search all 612 NYC Restaurant Week restaurants.",

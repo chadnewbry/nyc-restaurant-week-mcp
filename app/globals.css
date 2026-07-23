@@ -326,29 +326,42 @@ pre.block {
 .map-results { margin-top: 10px; }
 .map-status { margin: 14px 0 10px; min-height: 1.5em; }
 
-.nyc-svg {
-  display: block;
-  width: 100%;
+.map-canvas {
+  height: 68vh;
+  min-height: 430px;
   border: 2px solid var(--ink);
+  background: #0a0908;
+}
+
+.rick-marker { pointer-events: none; image-rendering: pixelated; }
+
+.rw-popup .maplibregl-popup-content {
   background: #000;
-  overflow: visible;
+  color: var(--ink);
+  font-family: var(--font-term);
+  font-size: 16px;
+  border: 1px solid var(--dim);
+  border-radius: 0;
+  padding: 4px 10px;
+  box-shadow: none;
 }
+.rw-popup .maplibregl-popup-tip { border-top-color: var(--dim); }
 
-.nyc-svg .land { fill: var(--land); }
-
-.boro-label {
-  font-family: var(--font-pixel);
-  font-size: 2.4px;
-  fill: var(--faint);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  user-select: none;
+.map-canvas .maplibregl-ctrl-attrib {
+  background: rgba(0, 0, 0, 0.65);
+  color: var(--faint);
+  font-size: 10px;
 }
+.map-canvas .maplibregl-ctrl-attrib a { color: var(--faint); }
 
-.pin { fill: var(--ink); cursor: pointer; opacity: 0.85; }
-.pin:hover { fill: #fff; opacity: 1; }
-.pin.dimmed { opacity: 0.15; }
-.pin.focused { fill: #fff; opacity: 1; animation: blink 1.05s step-end infinite; }
+.map-canvas .maplibregl-ctrl-group {
+  background: #000;
+  border: 1px solid var(--dim);
+  border-radius: 0;
+  box-shadow: none;
+}
+.map-canvas .maplibregl-ctrl-group button + button { border-top: 1px solid var(--faint); }
+.map-canvas .maplibregl-ctrl-group button span { filter: invert(1); }
 
 .map-focus { margin-top: 16px; }
 .map-focus .roam { margin-top: 8px; }

@@ -1,8 +1,20 @@
 "use client";
 
+import {
+  LngLatBounds,
+  Map as MLMap,
+  Marker,
+  NavigationControl,
+  Popup,
+  setWorkerUrl,
+  type MapLayerMouseEvent,
+} from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MAP_STYLE } from "@/lib/map-style";
+import { haversine, planRide, type LngLat, type SubwayData } from "@/lib/subway";
 import { Rick } from "../rick";
-import { BIKE, CAB, CHEF, RAT_RUN, Sprite } from "./sprites";
+import { BIKE, CAB, CHEF, RAT_RUN, TRAIN, spriteHTML } from "./sprites";
 
 export interface MapPin {
   slug: string;
@@ -20,124 +32,314 @@ export interface MapPin {
   image: string | null;
 }
 
-export interface NycMap {
-  cols: number;
-  rows: number;
-  bounds: { minLng: number; maxLng: number; minLat: number; maxLat: number };
-  grid: string[];
-}
+type Mode = "walk" | "bike" | "cab" | "ride" | "chef";
 
-interface XY {
-  x: number;
-  y: number;
+interface Leg {
+  kind: "walk" | "bike" | "cab" | "ride";
+  coords: LngLat[];
+  cum: number[]; // cumulative meters
+  total: number;
+  line?: string;
+  board?: string;
+  exit?: string;
 }
-
-type Vehicle = "walk" | "bike" | "cab";
-type Mode = Vehicle | "chef" | "idle";
 
 interface Journey {
-  pin: MapPin & XY;
-  tx: number;
-  ty: number;
-  phase: "h" | "v";
-  speed: number;
+  legs: Leg[];
+  legIdx: number;
+  traveled: number;
+  dest: MapPin;
 }
 
-const LABELS = [
-  { name: "the bronx", x: 96, y: 16 },
-  { name: "manhattan", x: 44, y: 38 },
-  { name: "queens", x: 116, y: 56 },
-  { name: "brooklyn", x: 84, y: 100 },
-  { name: "staten island", x: 26, y: 116 },
-];
-
-const VERB: Record<Vehicle, (name: string) => string> = {
-  walk: (n) => `rick scurries over to ${n}...`,
-  bike: (n) => `rick hops on a citibike → ${n}`,
-  cab: (n) => `rick hails a cab → ${n}`,
+// Official MTA route colors — the one deliberate splash of color on the map.
+const LINE_COLORS: Record<string, string> = {
+  "1": "#EE352E", "2": "#EE352E", "3": "#EE352E",
+  "4": "#00933C", "5": "#00933C", "6": "#00933C",
+  "7": "#B933AD",
+  A: "#0039A6", C: "#0039A6", E: "#0039A6", SIR: "#0039A6",
+  B: "#FF6319", D: "#FF6319", F: "#FF6319", M: "#FF6319",
+  G: "#6CBE45",
+  J: "#996633", Z: "#996633",
+  L: "#A7A9AC",
+  N: "#FCCC0A", Q: "#FCCC0A", R: "#FCCC0A", W: "#FCCC0A",
+  S: "#808183",
 };
 
-// Merge each grid row's land cells into horizontal run rects (fewer DOM nodes).
-function landRects(map: NycMap) {
-  const rects: Array<{ x: number; y: number; w: number }> = [];
-  map.grid.forEach((row, y) => {
-    let start = -1;
-    for (let x = 0; x <= row.length; x++) {
-      const land = x < row.length && row[x] === "#";
-      if (land && start === -1) start = x;
-      if (!land && start !== -1) {
-        rects.push({ x: start, y, w: x - start });
-        start = -1;
-      }
-    }
-  });
-  return rects;
+const SPEED: Record<Leg["kind"], number> = { walk: 320, bike: 700, cab: 1300, ride: 2000 };
+
+function cumulate(coords: LngLat[]): { cum: number[]; total: number } {
+  const cum = [0];
+  for (let i = 1; i < coords.length; i++) {
+    cum.push(cum[i - 1] + haversine(coords[i - 1], coords[i]));
+  }
+  return { cum, total: cum[cum.length - 1] };
 }
 
-export function MapView({ pins, map }: { pins: MapPin[]; map: NycMap }) {
-  const { bounds, cols, rows } = map;
+function makeLeg(kind: Leg["kind"], coords: LngLat[], extra?: Partial<Leg>): Leg {
+  return { kind, coords, ...cumulate(coords), ...extra };
+}
 
-  const located = useMemo(
-    () =>
-      pins.map((p) => ({
-        ...p,
-        x: ((p.lng - bounds.minLng) / (bounds.maxLng - bounds.minLng)) * cols,
-        y: ((bounds.maxLat - p.lat) / (bounds.maxLat - bounds.minLat)) * rows,
-      })),
-    [pins, bounds, cols, rows]
-  );
+async function osrm(from: LngLat, to: LngLat, profile: "foot" | "bike" | "driving"): Promise<LngLat[]> {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/${profile}/${from[0]},${from[1]};${to[0]},${to[1]}?overview=full&geometries=geojson`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error(String(res.status));
+    const d = await res.json();
+    const coords = d.routes?.[0]?.geometry?.coordinates;
+    if (coords?.length >= 2) return coords;
+  } catch {}
+  return [from, to]; // straight-line fallback
+}
 
-  const land = useMemo(() => landRects(map), [map]);
-
-  const [q, setQ] = useState("");
-  const [focus, setFocus] = useState<(MapPin & XY) | null>(null);
-  const [mode, setMode] = useState<Mode>("idle");
-  const [frame, setFrame] = useState(0);
-  const [flip, setFlip] = useState(false);
-  const [status, setStatus] = useState("rick is sniffing the night air...");
-
-  const posRef = useRef<XY>({ x: 71, y: 48 }); // start in manhattan
+export function MapView({ pins }: { pins: MapPin[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<MLMap | null>(null);
+  const markerRef = useRef<Marker | null>(null);
+  const markerElRef = useRef<HTMLDivElement | null>(null);
+  const subwayRef = useRef<SubwayData | null>(null);
   const journeyRef = useRef<Journey | null>(null);
-  const rickRef = useRef<SVGGElement>(null);
+  const posRef = useRef<LngLat>([-73.985, 40.74]);
+  const flipRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const focusRef = useRef<(MapPin & XY) | null>(null);
+  const focusRef = useRef<MapPin | null>(null);
+  const planningRef = useRef(false);
+
+  const [focus, setFocus] = useState<MapPin | null>(null);
+  const [mode, setMode] = useState<Mode>("walk");
+  const [frame, setFrame] = useState(0);
+  const [status, setStatus] = useState("rick is checking the service alerts...");
+  const [q, setQ] = useState("");
 
   const matched = useMemo(() => {
     const term = q.trim().toLowerCase();
     if (!term) return null;
-    return located.filter((p) =>
+    return pins.filter((p) =>
       `${p.name} ${p.cuisines.join(" ")} ${p.location} ${p.offers}`.toLowerCase().includes(term)
     );
-  }, [q, located]);
-  const matchedSlugs = useMemo(() => (matched ? new Set(matched.map((p) => p.slug)) : null), [matched]);
+  }, [q, pins]);
 
-  const startJourney = useCallback((pin: MapPin & XY) => {
-    const p = posRef.current;
-    const dist = Math.abs(pin.x - p.x) + Math.abs(pin.y - p.y);
-    if (dist < 0.5) {
-      setMode("chef");
-      setStatus(`rick's cooking at ${pin.name.toLowerCase()}`);
-      return;
-    }
-    const vehicle: Vehicle = dist < 14 ? "walk" : dist < 42 ? "bike" : "cab";
-    journeyRef.current = {
-      pin,
-      tx: pin.x,
-      ty: pin.y,
-      phase: Math.random() < 0.5 ? "h" : "v",
-      speed: vehicle === "walk" ? 9 : vehicle === "bike" ? 20 : 36,
-    };
-    setMode(vehicle);
-    setStatus(VERB[vehicle](pin.name.toLowerCase()));
+  const setActiveLine = useCallback((line: string | null) => {
+    const map = mapRef.current;
+    if (!map || !map.getLayer("subway-active")) return;
+    map.setFilter("subway-active", ["==", ["get", "line"], line ?? "__none__"]);
   }, []);
 
-  const randomPin = useCallback(
-    () => located[Math.floor(Math.random() * located.length)],
-    [located]
-  );
+  const startJourney = useCallback(async (dest: MapPin) => {
+    if (planningRef.current) return;
+    planningRef.current = true;
+    try {
+      const from = posRef.current;
+      const to: LngLat = [dest.lng, dest.lat];
+      const dist = haversine(from, to);
+      const legs: Leg[] = [];
 
-  // Main animation loop — position is updated imperatively so React only
-  // re-renders on mode/frame changes, not 60×/second.
+      const ride = dist > 2200 && subwayRef.current ? planRide(subwayRef.current, from, to) : null;
+      if (ride) {
+        const walkIn = await osrm(from, ride[0].coords[0], "foot");
+        legs.push(makeLeg("walk", walkIn));
+        for (const r of ride) {
+          legs.push(makeLeg("ride", r.coords, { line: r.line, board: r.board, exit: r.exit }));
+        }
+        const last = ride[ride.length - 1];
+        const walkOut = await osrm(last.coords[last.coords.length - 1], to, "foot");
+        legs.push(makeLeg("walk", walkOut));
+      } else if (dist < 900) {
+        legs.push(makeLeg("walk", await osrm(from, to, "foot")));
+      } else if (dist < 2600) {
+        legs.push(makeLeg("bike", await osrm(from, to, "bike")));
+      } else {
+        legs.push(makeLeg("cab", await osrm(from, to, "driving")));
+      }
+
+      journeyRef.current = { legs, legIdx: 0, traveled: 0, dest };
+      applyLeg(legs[0], dest);
+
+      // Frame the whole trip.
+      const all = legs.flatMap((l) => l.coords);
+      const b = all.reduce((acc, c) => acc.extend(c), new LngLatBounds(all[0], all[0]));
+      mapRef.current?.fitBounds(b, { padding: 90, duration: 900, maxZoom: 14.5 });
+    } finally {
+      planningRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const applyLeg = useCallback((leg: Leg, dest: MapPin) => {
+    const name = dest.name.toLowerCase();
+    if (leg.kind === "walk") {
+      setMode("walk");
+      setStatus(`rick scurries toward ${name}...`);
+      setActiveLine(null);
+    } else if (leg.kind === "bike") {
+      setMode("bike");
+      setStatus(`rick hops on a citibike → ${name}`);
+      setActiveLine(null);
+    } else if (leg.kind === "cab") {
+      setMode("cab");
+      setStatus(`rick hails a cab → ${name}`);
+      setActiveLine(null);
+    } else {
+      setMode("ride");
+      setStatus(
+        `rick swipes in at ${leg.board?.toLowerCase()} → rides the ${leg.line} to ${leg.exit?.toLowerCase()}`
+      );
+      setActiveLine(leg.line ?? null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const randomPin = useCallback(() => pins[Math.floor(Math.random() * pins.length)], [pins]);
+
+  // Map init.
+  useEffect(() => {
+    // Webpack breaks MapLibre's relative worker URL; serve it ourselves
+    // (staged into public/vendor by scripts/copy-maplibre-worker.mjs).
+    setWorkerUrl("/vendor/maplibre-gl-worker.mjs");
+    const map = new MLMap({
+      container: containerRef.current!,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      style: MAP_STYLE as any,
+      bounds: [
+        [-74.045, 40.63],
+        [-73.83, 40.85],
+      ],
+      maxBounds: [
+        [-74.5, 40.3],
+        [-73.4, 41.05],
+      ],
+      attributionControl: { compact: true },
+    });
+    mapRef.current = map;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (typeof window !== "undefined") (window as any).__rickMap = map;
+    map.addControl(new NavigationControl({ showCompass: false }), "top-right");
+    map.on("error", (e) => console.warn("map error:", e.error?.message ?? e));
+
+    map.on("load", async () => {
+      // Subway lines + stations (real MTA geometry).
+      const subway: SubwayData = await (await fetch("/subway.json")).json();
+      subwayRef.current = subway;
+      const lineFeatures = Object.entries(subway.lines).flatMap(([line, segs]) =>
+        segs.map((coords) => ({
+          type: "Feature" as const,
+          properties: { line, color: LINE_COLORS[line] ?? "#808183" },
+          geometry: { type: "LineString" as const, coordinates: coords },
+        }))
+      );
+      map.addSource("subway", { type: "geojson", data: { type: "FeatureCollection", features: lineFeatures } });
+      map.addLayer({
+        id: "subway",
+        type: "line",
+        source: "subway",
+        paint: {
+          "line-color": ["get", "color"],
+          "line-opacity": 0.4,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 9, 1, 14, 2.5],
+        },
+      });
+      map.addLayer({
+        id: "subway-active",
+        type: "line",
+        source: "subway",
+        filter: ["==", ["get", "line"], "__none__"],
+        paint: {
+          "line-color": ["get", "color"],
+          "line-opacity": 0.95,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 9, 2.5, 14, 5],
+        },
+      });
+      map.addSource("stations", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: subway.stations.map((s) => ({
+            type: "Feature" as const,
+            properties: { name: s.n },
+            geometry: { type: "Point" as const, coordinates: [s.x, s.y] },
+          })),
+        },
+      });
+      map.addLayer({
+        id: "stations",
+        type: "circle",
+        source: "stations",
+        minzoom: 11.5,
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 1.5, 15, 3.5],
+          "circle-color": "#6b6357",
+        },
+      });
+
+      // Restaurant pins.
+      map.addSource("restaurants", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: pins.map((p) => ({
+            type: "Feature" as const,
+            properties: { slug: p.slug, name: p.name },
+            geometry: { type: "Point" as const, coordinates: [p.lng, p.lat] },
+          })),
+        },
+      });
+      map.addLayer({
+        id: "pins",
+        type: "circle",
+        source: "restaurants",
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 2.5, 14, 5.5],
+          "circle-color": "#f2e9dc",
+          "circle-stroke-color": "#000000",
+          "circle-stroke-width": 1,
+        },
+      });
+
+      const popup = new Popup({
+        closeButton: false,
+        closeOnClick: false,
+        className: "rw-popup",
+        offset: 10,
+      });
+      map.on("mouseenter", "pins", (e: MapLayerMouseEvent) => {
+        map.getCanvas().style.cursor = "pointer";
+        const f = e.features?.[0];
+        if (f && f.geometry.type === "Point") {
+          popup
+            .setLngLat(f.geometry.coordinates as LngLat)
+            .setText((f.properties.name as string).toLowerCase())
+            .addTo(map);
+        }
+      });
+      map.on("mouseleave", "pins", () => {
+        map.getCanvas().style.cursor = "";
+        popup.remove();
+      });
+      map.on("click", "pins", (e: MapLayerMouseEvent) => {
+        const slug = e.features?.[0]?.properties.slug;
+        const pin = pins.find((p) => p.slug === slug);
+        if (pin) setFocus(pin);
+      });
+
+      // Rick.
+      const el = document.createElement("div");
+      el.className = "rick-marker";
+      el.innerHTML = spriteHTML(RAT_RUN[0]);
+      markerElRef.current = el;
+      markerRef.current = new Marker({ element: el, anchor: "bottom" })
+        .setLngLat(posRef.current)
+        .addTo(map);
+
+      timerRef.current = setTimeout(() => startJourney(randomPin()), 1500);
+    });
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      map.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Animation loop.
   useEffect(() => {
     let raf: number;
     let last = performance.now();
@@ -146,71 +348,76 @@ export function MapView({ pins, map }: { pins: MapPin[]; map: NycMap }) {
       last = now;
       const j = journeyRef.current;
       if (j) {
-        const p = posRef.current;
-        const step = j.speed * dt;
-        const moveAxis = (axis: "x" | "y"): boolean => {
-          const target = axis === "x" ? j.tx : j.ty;
-          const d = target - p[axis];
-          if (axis === "x" && Math.abs(d) > 0.01) setFlip(d < 0);
-          if (Math.abs(d) <= step) {
-            p[axis] = target;
-            return true;
+        const leg = j.legs[j.legIdx];
+        j.traveled += SPEED[leg.kind] * dt;
+        if (j.traveled >= leg.total) {
+          if (j.legIdx < j.legs.length - 1) {
+            j.legIdx++;
+            j.traveled = 0;
+            applyLeg(j.legs[j.legIdx], j.dest);
+          } else {
+            posRef.current = [j.dest.lng, j.dest.lat];
+            markerRef.current?.setLngLat(posRef.current);
+            journeyRef.current = null;
+            setMode("chef");
+            setStatus(`rick's cooking at ${j.dest.name.toLowerCase()}`);
+            setActiveLine(null);
+            if (!focusRef.current) {
+              timerRef.current = setTimeout(() => startJourney(randomPin()), 4200);
+            }
           }
-          p[axis] += Math.sign(d) * step;
-          return false;
-        };
-        const order: Array<"x" | "y"> = j.phase === "h" ? ["x", "y"] : ["y", "x"];
-        if (moveAxis(order[0]) && moveAxis(order[1])) {
-          journeyRef.current = null;
-          setMode("chef");
-          setStatus(`rick's cooking at ${j.pin.name.toLowerCase()}`);
-          if (!focusRef.current) {
-            timerRef.current = setTimeout(() => startJourney(randomPin()), 3400);
-          }
+        } else {
+          // Interpolate along the leg.
+          const { coords, cum } = leg;
+          let i = 1;
+          while (i < cum.length - 1 && cum[i] < j.traveled) i++;
+          const span = cum[i] - cum[i - 1] || 1;
+          const t = (j.traveled - cum[i - 1]) / span;
+          const a = coords[i - 1], b = coords[i];
+          const lng = a[0] + (b[0] - a[0]) * t;
+          const lat = a[1] + (b[1] - a[1]) * t;
+          if (Math.abs(b[0] - a[0]) > 1e-7) flipRef.current = b[0] < a[0];
+          posRef.current = [lng, lat];
+          markerRef.current?.setLngLat([lng, lat]);
         }
       }
-      const p = posRef.current;
-      rickRef.current?.setAttribute("transform", `translate(${p.x} ${p.y})`);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [startJourney, randomPin]);
+  }, [applyLeg, randomPin, setActiveLine, startJourney]);
 
-  // Kick off the idle roam.
-  useEffect(() => {
-    timerRef.current = setTimeout(() => startJourney(randomPin()), 1200);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [startJourney, randomPin]);
-
-  // Focus changes redirect Rick immediately.
+  // Focus → send Rick there.
   useEffect(() => {
     focusRef.current = focus;
     if (timerRef.current) clearTimeout(timerRef.current);
     if (focus) {
+      journeyRef.current = null;
       startJourney(focus);
     } else {
-      timerRef.current = setTimeout(() => startJourney(randomPin()), 1800);
+      timerRef.current = setTimeout(() => startJourney(randomPin()), 2000);
     }
   }, [focus, startJourney, randomPin]);
 
-  // Leg/pedal animation while moving.
+  // Leg/pedal frames while moving.
   useEffect(() => {
     if (mode !== "walk" && mode !== "bike") return;
     const t = setInterval(() => setFrame((f) => f ^ 1), 150);
     return () => clearInterval(t);
   }, [mode]);
 
-  const sprite =
-    mode === "walk" || mode === "idle"
-      ? { grid: RAT_RUN[frame], scale: 0.45 }
-      : mode === "bike"
-        ? { grid: BIKE[frame], scale: 0.5 }
-        : mode === "cab"
-          ? { grid: CAB[0], scale: 0.5 }
-          : { grid: CHEF[0], scale: 0.55 };
+  // Swap the marker sprite when mode/frame/direction change.
+  useEffect(() => {
+    const el = markerElRef.current;
+    if (!el) return;
+    const grid =
+      mode === "walk" ? RAT_RUN[frame]
+      : mode === "bike" ? BIKE[frame]
+      : mode === "cab" ? CAB[0]
+      : mode === "ride" ? TRAIN[0]
+      : CHEF[0];
+    el.innerHTML = spriteHTML(grid, 3, flipRef.current && mode !== "chef");
+  }, [mode, frame]);
 
   return (
     <div className="map-page wrap">
@@ -219,7 +426,7 @@ export function MapView({ pins, map }: { pins: MapPin[]; map: NycMap }) {
         <div className="ask-title">rick&apos;s map</div>
       </div>
       <div className="ask-sub">
-        {located.length} spots pinned. <a href="/">[ ask rick ]</a>
+        {pins.length} spots pinned. <a href="/">[ ask rick ]</a>
       </div>
 
       <form
@@ -257,40 +464,7 @@ export function MapView({ pins, map }: { pins: MapPin[]; map: NycMap }) {
 
       <div className="line sys map-status">{status}</div>
 
-      <svg
-        className="nyc-svg"
-        viewBox={`0 0 ${cols} ${rows}`}
-        shapeRendering="crispEdges"
-        role="img"
-        aria-label="Pixel map of New York City with restaurant pins"
-      >
-        {land.map((r, i) => (
-          <rect key={i} className="land" x={r.x} y={r.y} width={r.w} height="1" />
-        ))}
-        {LABELS.map((l) => (
-          <text key={l.name} className="boro-label" x={l.x} y={l.y}>
-            {l.name}
-          </text>
-        ))}
-        {located.map((p) => (
-          <rect
-            key={p.slug}
-            className={`pin${focus?.slug === p.slug ? " focused" : ""}${
-              matchedSlugs && !matchedSlugs.has(p.slug) ? " dimmed" : ""
-            }`}
-            x={p.x - 0.6}
-            y={p.y - 0.6}
-            width="1.2"
-            height="1.2"
-            onClick={() => setFocus(p)}
-          >
-            <title>{p.name}</title>
-          </rect>
-        ))}
-        <g ref={rickRef}>
-          <Sprite grid={sprite.grid} x={0} y={0} scale={sprite.scale} flip={flip} />
-        </g>
-      </svg>
+      <div ref={containerRef} className="map-canvas" />
 
       {focus && (
         <div className="map-focus">

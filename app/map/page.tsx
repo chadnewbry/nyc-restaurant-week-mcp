@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { RESTAURANTS } from "@/lib/data";
 import { card } from "@/lib/format";
-import nycmap from "@/data/nycmap.json";
-import { MapView, type MapPin, type NycMap } from "./map-view";
+import { MapView, type MapPin } from "./map-view";
 
 export const metadata: Metadata = {
   title: "rick's map — NYC Restaurant Week",
   description:
-    "A pixel map of all five boroughs with every NYC Restaurant Week spot pinned. Watch Rick the rat scurry, citibike, and cab his way to your pick.",
+    "A live map of every NYC Restaurant Week spot on real NYC cartography — subway lines included. Watch Rick the rat walk, citibike, cab, and ride the train to your pick.",
 };
 
 export default function MapPage() {
@@ -17,5 +16,5 @@ export default function MapPage() {
     void weeks;
     return { ...rest, lat: r.lat!, lng: r.lng! };
   });
-  return <MapView pins={pins} map={nycmap as NycMap} />;
+  return <MapView pins={pins} />;
 }

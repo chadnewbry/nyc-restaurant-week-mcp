@@ -72,6 +72,19 @@ export const CAB: string[][] = [
   ],
 ];
 
+// Subway car, Rick visible in one window.
+export const TRAIN: string[][] = [
+  [
+    ".##############.",
+    "################",
+    "##xx##xx##oo##x#",
+    "################",
+    "#o#o#o#o#o#o#o#o",
+    "################",
+    "..##..####..##..",
+  ],
+];
+
 // Front-facing Rick in a chef hat — the "arrived, now cooking" state.
 export const CHEF: string[][] = [
   [
@@ -89,6 +102,22 @@ export const CHEF: string[][] = [
     "....######....",
   ],
 ];
+
+// Plain-HTML renderer for MapLibre markers (no React inside the map canvas).
+const HTML_COLORS: Record<string, string> = { "#": "#f2e9dc", o: "#b5aa9a", x: "#000000" };
+
+export function spriteHTML(grid: string[], px = 3, flip = false): string {
+  const w = grid[0].length;
+  const h = grid.length;
+  const rects = grid
+    .flatMap((row, y) =>
+      row.split("").map((c, x) =>
+        c === "." ? "" : `<rect x="${x}" y="${y}" width="1" height="1" fill="${HTML_COLORS[c]}"/>`
+      )
+    )
+    .join("");
+  return `<svg width="${w * px}" height="${h * px}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges" style="display:block${flip ? ";transform:scaleX(-1)" : ""}">${rects}</svg>`;
+}
 
 export function Sprite({
   grid,

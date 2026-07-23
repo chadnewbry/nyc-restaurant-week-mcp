@@ -12,7 +12,7 @@ interface Msg {
 
 const INTRO_LINES = [
   "welcome to nyc restaurant week.",
-  "this is rick. resident rat.",
+  "this is rick.",
   "he knows every kitchen in the city.",
 ];
 
@@ -52,21 +52,31 @@ function Cards({ items }: { items: RestaurantCard[] }) {
   );
 }
 
+// One line on screen at a time: it types itself out, then waits. Enter (or a
+// tap) clears it and types the next; enter on the last line drops into the app.
 function Intro({ onDone }: { onDone: () => void }) {
-  const [shown, setShown] = useState(0); // characters revealed across all lines
-  const total = INTRO_LINES.join("").length;
-  const complete = shown >= total;
+  const [idx, setIdx] = useState(0); // which line is on screen
+  const [shown, setShown] = useState(0); // characters revealed of that line
+  const line = INTRO_LINES[idx];
+  const typed = shown >= line.length;
+  const last = idx === INTRO_LINES.length - 1;
 
   useEffect(() => {
-    if (complete) return;
-    const t = setInterval(() => setShown((s) => Math.min(s + 1, total)), 42);
+    if (typed) return;
+    const t = setInterval(() => setShown((s) => Math.min(s + 1, line.length)), 42);
     return () => clearInterval(t);
-  }, [complete, total]);
+  }, [typed, line.length]);
 
   const advance = useCallback(() => {
-    if (!complete) setShown(total);
-    else onDone();
-  }, [complete, total, onDone]);
+    if (!typed) {
+      setShown(line.length); // first press finishes the line rather than skipping it
+    } else if (last) {
+      onDone();
+    } else {
+      setIdx((i) => i + 1);
+      setShown(0);
+    }
+  }, [typed, line.length, last, onDone]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -79,27 +89,20 @@ function Intro({ onDone }: { onDone: () => void }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [advance]);
 
-  let remaining = shown;
-  const lines = INTRO_LINES.map((l) => {
-    const part = l.slice(0, Math.max(0, remaining));
-    remaining -= l.length;
-    return part;
-  });
-
   return (
     <div className="stage" onClick={advance}>
       <div className="glow" />
       <Rick size={168} bob />
       <div className="intro-lines">
-        {lines.map((l, i) => (
-          <div key={i} className={`intro-line${i > 0 ? " dim" : ""}`}>
-            {l}
-            {!complete && l.length > 0 && l.length < INTRO_LINES[i].length ? <span className="blink">█</span> : null}
-          </div>
-        ))}
+        <div className="intro-line">
+          {line.slice(0, shown)}
+          <span className="blink">█</span>
+        </div>
       </div>
-      {complete ? (
-        <div className="press-enter blink">[ tap or press enter ]</div>
+      {typed ? (
+        <div className="press-enter blink">
+          {last ? "[ tap or press enter ]" : "[ press enter ]"}
+        </div>
       ) : (
         <div className="press-enter" style={{ opacity: 0.35 }}>[ tap to skip ]</div>
       )}
@@ -161,21 +164,6 @@ function Ask() {
       <div className="ask-sub">612 restaurant week spots. $30 / $45 / $60. jul 20 – sep 6.</div>
 
       <div className="term">
-        <div className="term-body">
-          {msgs.map((m, i) => (
-            <div key={i}>
-              <div className={`line ${m.role === "user" ? "user" : "bot"}`}>{m.content}</div>
-              {m.restaurants ? <Cards items={m.restaurants} /> : null}
-            </div>
-          ))}
-          {busy ? (
-            <div className="line sys">
-              rick is sniffing around<span className="blink">█</span>
-            </div>
-          ) : null}
-          <div ref={endRef} />
-        </div>
-
         <form
           className="term-form"
           onSubmit={(e) => {
@@ -207,6 +195,21 @@ function Ask() {
             ))}
           </div>
         ) : null}
+
+        <div className="term-body">
+          {msgs.map((m, i) => (
+            <div key={i}>
+              <div className={`line ${m.role === "user" ? "user" : "bot"}`}>{m.content}</div>
+              {m.restaurants ? <Cards items={m.restaurants} /> : null}
+            </div>
+          ))}
+          {busy ? (
+            <div className="line sys">
+              rick is sniffing around<span className="blink">█</span>
+            </div>
+          ) : null}
+          <div ref={endRef} />
+        </div>
       </div>
     </div>
   );

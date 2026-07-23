@@ -123,8 +123,10 @@ export function MapView({ pins }: { pins: MapPin[] }) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const focusRef = useRef<MapPin | null>(null);
   const planningRef = useRef(false);
+  const roamRef = useRef(true);
 
   const [focus, setFocus] = useState<MapPin | null>(null);
+  const [roam, setRoam] = useState(true);
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<Mode>("walk");
   const [frame, setFrame] = useState(0);
@@ -213,6 +215,25 @@ export function MapView({ pins }: { pins: MapPin[] }) {
   }, []);
 
   const randomPin = useCallback(() => pins[Math.floor(Math.random() * pins.length)], [pins]);
+
+  // Roaming toggle: off parks Rick wherever he is (any trip in flight is
+  // dropped); on sends him back out. Picking a spot still works either way.
+  const toggleRoam = useCallback(() => {
+    const next = !roamRef.current;
+    roamRef.current = next;
+    setRoam(next);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (next) {
+      if (!focusRef.current) {
+        timerRef.current = setTimeout(() => startJourney(randomPin()), 400);
+      }
+    } else {
+      journeyRef.current = null;
+      setMode("chef");
+      setActiveLine(null);
+      setStatus("rick is taking five. hit roam to send him back out.");
+    }
+  }, [randomPin, setActiveLine, startJourney]);
 
   // Map init.
   useEffect(() => {
@@ -357,7 +378,9 @@ export function MapView({ pins }: { pins: MapPin[] }) {
         .addTo(map);
 
       setReady(true);
-      timerRef.current = setTimeout(() => startJourney(randomPin()), 1500);
+      timerRef.current = setTimeout(() => {
+        if (roamRef.current && !focusRef.current) startJourney(randomPin());
+      }, 1500);
     });
 
     return () => {
@@ -390,7 +413,7 @@ export function MapView({ pins }: { pins: MapPin[] }) {
             setMode("chef");
             setStatus(`rick's cooking at ${j.dest.name.toLowerCase()}`);
             setActiveLine(null);
-            if (!focusRef.current) {
+            if (!focusRef.current && roamRef.current) {
               timerRef.current = setTimeout(() => startJourney(randomPin()), 4200);
             }
           }
@@ -440,7 +463,7 @@ export function MapView({ pins }: { pins: MapPin[] }) {
       setTimeout(() => {
         document.querySelector(".map-focus")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }, 350);
-    } else {
+    } else if (roamRef.current) {
       timerRef.current = setTimeout(() => startJourney(randomPin()), 2000);
     }
   }, [focus, startJourney, randomPin]);
@@ -508,7 +531,18 @@ export function MapView({ pins }: { pins: MapPin[] }) {
         </div>
       )}
 
-      <div className="line sys map-status">{status}</div>
+      <div className="map-status-row">
+        <div className="line sys map-status">{status}</div>
+        <button
+          className="roam-toggle"
+          type="button"
+          onClick={toggleRoam}
+          aria-pressed={roam}
+          title={roam ? "stop rick wandering the map" : "let rick wander the map again"}
+        >
+          {roam ? "stop rick" : "roam"}
+        </button>
+      </div>
 
       <div ref={containerRef} className="map-canvas" />
 
@@ -533,7 +567,13 @@ export function MapView({ pins }: { pins: MapPin[] }) {
               <a href={focus.maps} target="_blank" rel="noreferrer">maps</a>
             </div>
           </div>
-          <button className="example roam" onClick={() => setFocus(null)}>
+          <button
+            className="example roam"
+            onClick={() => {
+              setFocus(null);
+              if (!roamRef.current) toggleRoam();
+            }}
+          >
             let rick roam free
           </button>
         </div>

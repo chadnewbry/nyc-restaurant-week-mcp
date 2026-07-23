@@ -425,7 +425,7 @@ export function MapView({ pins }: { pins: MapPin[] }) {
             markerRef.current?.setLngLat(posRef.current);
             journeyRef.current = null;
             setMode("chef");
-            setStatus(`rick's cooking at ${j.dest.name.toLowerCase()}`);
+            setStatus(`rick's eating at ${j.dest.name.toLowerCase()}`);
             setActiveLine(null);
             if (!focusRef.current && roamRef.current) {
               timerRef.current = setTimeout(() => startJourney(randomPin()), 4200);

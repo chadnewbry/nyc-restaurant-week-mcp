@@ -231,19 +231,33 @@ a { color: var(--ink); }
 
 @media (min-width: 560px) { .chat-cards { grid-template-columns: 1fr 1fr; } }
 
-.ccard { border: 2px solid var(--ink); padding: 14px 16px; font-size: 18px; background: #000; }
+.ccard {
+  border: 1px solid var(--faint);
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 14px 16px;
+  font-size: 19px;
+  background: #0d0b08;
+}
 .ccard .photo {
   display: block;
   width: calc(100% + 32px);
   margin: -14px -16px 12px;
-  height: 130px;
+  height: 150px;
   object-fit: cover;
-  border-bottom: 2px solid var(--ink);
-  filter: grayscale(1) sepia(0.22) contrast(1.05) brightness(0.92);
+  border-bottom: 1px solid var(--faint);
+  /* full color — no grayscale filter */
 }
-.ccard .n { font-family: var(--font-pixel); font-size: 10.5px; line-height: 1.7; text-transform: uppercase; }
-.ccard .m { color: var(--dim); margin-top: 5px; }
-.ccard .o { color: var(--ink); margin-top: 2px; }
+.ccard .n {
+  font-family: var(--font-term);
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.ccard .m { color: var(--dim); margin-top: 6px; }
+.ccard .o { color: var(--ink); margin-top: 3px; }
 .ccard .links { margin-top: 8px; display: flex; gap: 16px; flex-wrap: wrap; font-size: 16px; }
 .ccard .links a { display: inline-block; padding: 4px 0; color: var(--dim); text-decoration: none; border-bottom: 1px dotted var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
 .ccard .links a:hover { color: var(--ink); border-color: var(--ink); }
@@ -460,8 +474,9 @@ footer .fine { max-width: 72ch; margin: 8px auto 0; line-height: 1.65; }
   .example { padding: 9px 0; font-size: 19px; }
   .examples { margin-top: 16px; }
 
-  .ccard { padding: 12px 14px; font-size: 17px; }
-  .ccard .photo { width: calc(100% + 28px); margin: -12px -14px 10px; height: 110px; }
+  .ccard { padding: 12px 14px; font-size: 18px; }
+  .ccard .photo { width: calc(100% + 28px); margin: -12px -14px 10px; height: 130px; }
+  .ccard .n { font-size: 23px; }
 
   .map-page { padding: 22px 0 44px; }
   .map-page .term-form { margin-top: 16px; }

@@ -19,6 +19,8 @@ import { Rick } from "../rick";
 // Rat: Downloads sprite sheet (48px grid; white rat = columns 9-11, side-walk
 // frames on rows 1-2, top-down idle on row 0). Faces LEFT natively.
 // Vehicles: Kenney Pixel Vehicle Pack (CC0). Face RIGHT natively.
+// Subway car: "2D Train/Tram/Carriage" by Chasersgaming (OpenGameArt, CC0),
+// repainted per route color by scripts/make-subway-sprites.mjs.
 const RAT_COL0 = 9; // white variant
 const HAT_SVG = `<svg class="hat" width="22" height="16" viewBox="0 0 11 8" shape-rendering="crispEdges"><rect x="2" y="0" width="7" height="2" fill="#f2e9dc"/><rect x="1" y="2" width="9" height="2" fill="#f2e9dc"/><rect x="2" y="4" width="7" height="3" fill="#f2e9dc"/><rect x="2" y="7" width="7" height="1" fill="#b5aa9a"/></svg>`;
 
@@ -34,6 +36,12 @@ function ratIdleHTML(hat: boolean): string {
 
 function vehicleHTML(src: string, w: number, h: number, movingLeft: boolean): string {
   return `<img class="spr veh${movingLeft ? " flip" : ""}" src="${src}" width="${w * 2}" height="${h * 2}" alt=""/>`;
+}
+
+// One repainted car per route color — see scripts/make-subway-sprites.mjs.
+function subwayHTML(line: string | null, movingLeft: boolean): string {
+  const hex = (LINE_COLORS[line ?? ""] ?? "#808183").slice(1).toUpperCase();
+  return vehicleHTML(`/sprites/subway/${hex}.png`, 50, 24, movingLeft);
 }
 
 export interface MapPin {
@@ -129,6 +137,7 @@ export function MapView({ pins }: { pins: MapPin[] }) {
   const [roam, setRoam] = useState(true);
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<Mode>("walk");
+  const [line, setLine] = useState<string | null>(null); // route rick is riding
   const [frame, setFrame] = useState(0);
   const [status, setStatus] = useState("rick is checking the service alerts...");
   const [q, setQ] = useState("");
@@ -144,10 +153,11 @@ export function MapView({ pins }: { pins: MapPin[] }) {
     });
   }, [q, pins]);
 
-  const setActiveLine = useCallback((line: string | null) => {
+  const setActiveLine = useCallback((next: string | null) => {
+    setLine(next);
     const map = mapRef.current;
     if (!map || !map.getLayer("subway-active")) return;
-    map.setFilter("subway-active", ["==", ["get", "line"], line ?? "__none__"]);
+    map.setFilter("subway-active", ["==", ["get", "line"], next ?? "__none__"]);
   }, []);
 
   const startJourney = useCallback(async (dest: MapPin) => {
@@ -470,7 +480,7 @@ export function MapView({ pins }: { pins: MapPin[] }) {
 
   // Walk-cycle frames while moving (6-frame cycle across the sheet's two rows).
   useEffect(() => {
-    if (mode !== "walk" && mode !== "ride") return;
+    if (mode !== "walk") return;
     const t = setInterval(() => setFrame((f) => (f + 1) % 6), 140);
     return () => clearInterval(t);
   }, [mode]);
@@ -482,11 +492,11 @@ export function MapView({ pins }: { pins: MapPin[] }) {
     const left = flipRef.current;
     el.innerHTML =
       mode === "walk" ? ratWalkHTML(frame, left)
-      : mode === "ride" ? ratWalkHTML(frame, left, 0.55) // underground
+      : mode === "ride" ? subwayHTML(line, left)
       : mode === "bike" ? vehicleHTML("/sprites/cycle.png", 16, 10, left)
       : mode === "cab" ? vehicleHTML("/sprites/taxi.png", 33, 14, left)
       : ratIdleHTML(true);
-  }, [mode, frame]);
+  }, [mode, frame, line]);
 
   return (
     <div className="map-page wrap">

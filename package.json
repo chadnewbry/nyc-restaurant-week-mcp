@@ -10,7 +10,8 @@
     "start": "next start",
     "scrape": "node scripts/scrape.mjs",
     "geocode": "node scripts/geocode.mjs",
-    "subway": "node scripts/subway.mjs"
+    "subway": "node scripts/subway.mjs",
+    "subway-sprites": "node scripts/make-subway-sprites.mjs"
   },
   "dependencies": {
     "ai": "^7.0.34",
@@ -24,6 +25,7 @@
   "devDependencies": {
     "@types/node": "^22",
     "@types/react": "^19",
+    "sharp": "^0.34.5",
     "typescript": "^5"
   }
 }

@@ -113,25 +113,19 @@ function emojiFor(cuisines: string[]): string {
   return "🍴";
 }
 
-// Draw a cuisine emoji onto a cream-ringed dark coin, so it reads on any part
-// of the basemap and still feels like the old dot. Returned as ImageData for
-// map.addImage (registered once per distinct emoji).
-function emojiCoin(emoji: string, size = 48): ImageData {
+// Draw a bare cuisine emoji (no coin/ring) as ImageData for map.addImage,
+// registered once per distinct emoji. A soft shadow keeps it legible over
+// light basemap areas without adding a visible shape behind it.
+function emojiIcon(emoji: string, size = 48): ImageData {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext("2d")!;
-  const c = size / 2;
-  ctx.beginPath();
-  ctx.arc(c, c, size * 0.46, 0, Math.PI * 2);
-  ctx.fillStyle = "#0d0b08";
-  ctx.fill();
-  ctx.lineWidth = size * 0.05;
-  ctx.strokeStyle = "#f2e9dc";
-  ctx.stroke();
-  ctx.font = `${Math.round(size * 0.56)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+  ctx.font = `${Math.round(size * 0.8)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(emoji, c, c + size * 0.04);
+  ctx.shadowColor = "rgba(0,0,0,0.45)";
+  ctx.shadowBlur = size * 0.06;
+  ctx.fillText(emoji, size / 2, size / 2 + size * 0.04);
   return ctx.getImageData(0, 0, size, size);
 }
 
@@ -436,7 +430,7 @@ export function MapView({ pins }: { pins: MapPin[] }) {
         },
       });
       for (const em of new Set(pins.map((p) => emojiFor(p.cuisines)))) {
-        if (!map.hasImage(em)) map.addImage(em, emojiCoin(em), { pixelRatio: 2 });
+        if (!map.hasImage(em)) map.addImage(em, emojiIcon(em), { pixelRatio: 2 });
       }
       map.addLayer({
         id: "pins",

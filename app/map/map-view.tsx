@@ -11,9 +11,11 @@ import {
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import posthog from "posthog-js";
 import { MAP_STYLE } from "@/lib/map-style";
 import { haversine, planRide, type LngLat, type SubwayData } from "@/lib/subway";
 import { Rick } from "../rick";
+import { ShareLink } from "../share-link";
 
 // ---- marker sprites -------------------------------------------------------
 // Rat: Downloads sprite sheet (48px grid; white rat = columns 9-11, side-walk
@@ -219,6 +221,10 @@ export function MapView({ pins }: { pins: MapPin[] }) {
   const roamRef = useRef(true);
 
   const [focus, setFocus] = useState<MapPin | null>(null);
+  // ?r=<slug> deep link, grabbed before any URL syncing can clear it.
+  const [sharedSlug] = useState<string | null>(() =>
+    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("r")
+  );
   const [roam, setRoam] = useState(true);
   const [ready, setReady] = useState(false);
   const [mode, setMode] = useState<Mode>("walk");
@@ -579,9 +585,28 @@ export function MapView({ pins }: { pins: MapPin[] }) {
     }
   }, [matched, ready]);
 
+  // Shared link: once the map is up, open the linked spot and send Rick over.
+  useEffect(() => {
+    if (!ready || !sharedSlug) return;
+    const pin = pins.find((p) => p.slug === sharedSlug);
+    if (pin) {
+      setFocus(pin);
+      posthog.capture("share_link_opened", { slug: pin.slug });
+    }
+  }, [ready, sharedSlug, pins]);
+
+  // Keep the URL shareable: reflect the focused spot as ?r=<slug>.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (focus) url.searchParams.set("r", focus.slug);
+    else url.searchParams.delete("r");
+    window.history.replaceState(null, "", url.toString());
+  }, [focus]);
+
   // Focus → send Rick there.
   useEffect(() => {
     focusRef.current = focus;
+    if (focus) posthog.capture("map_restaurant_selected", { slug: focus.slug });
     if (timerRef.current) clearTimeout(timerRef.current);
     if (focus) {
       journeyRef.current = null;
@@ -691,6 +716,7 @@ export function MapView({ pins }: { pins: MapPin[] }) {
               {focus.menuUrl ? <a href={focus.menuUrl} target="_blank" rel="noreferrer">menu</a> : null}
               {focus.website ? <a href={focus.website} target="_blank" rel="noreferrer">site</a> : null}
               <a href={focus.maps} target="_blank" rel="noreferrer">maps</a>
+              <ShareLink slug={focus.slug} />
             </div>
           </div>
           <button

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     "Free open MCP server for NYC Restaurant Week Summer 2026. Connect Claude, Cursor, or any MCP client to 612 participating restaurants.",
 };
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://nyc-restaurant-week-mcp.vercel.app";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://nycrestaurantweek.app";
 const MCP_URL = `${SITE}/mcp`;
 
 const CLAUDE_CMD = `claude mcp add --transport http nyc-restaurant-week ${MCP_URL}`;

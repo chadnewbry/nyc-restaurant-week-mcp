@@ -13,7 +13,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://nyc-restaurant-week-mcp.vercel.app"),
+  metadataBase: new URL("https://nycrestaurantweek.app"),
   title: "ask rick — NYC Restaurant Week, guided by a resident rat",
   description:
     "A minimal 8-bit guide to NYC Restaurant Week Summer 2026. Ask Rick, the resident rat, to search 612 participating restaurants by cuisine, price, neighborhood, and date — menus and OpenTable links included. Free MCP server for developers.",

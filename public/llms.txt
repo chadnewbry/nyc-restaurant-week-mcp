@@ -8,8 +8,8 @@ Not affiliated with NYC Tourism + Conventions or NYC Restaurant Week®. Data is 
 
 Connect directly instead of scraping this site:
 
-- Endpoint: https://nyc-restaurant-week-mcp.vercel.app/mcp (Streamable HTTP, no auth, no API key)
-- Claude Code: `claude mcp add --transport http nyc-restaurant-week https://nyc-restaurant-week-mcp.vercel.app/mcp`
+- Endpoint: https://nycrestaurantweek.app/mcp (Streamable HTTP, no auth, no API key)
+- Claude Code: `claude mcp add --transport http nyc-restaurant-week https://nycrestaurantweek.app/mcp`
 
 Tools:
 
@@ -20,9 +20,9 @@ Tools:
 
 ## Pages
 
-- [Home](https://nyc-restaurant-week-mcp.vercel.app/): chat with Rick to find a restaurant
-- [Map](https://nyc-restaurant-week-mcp.vercel.app/map): every participating restaurant on a live NYC map with subway lines
-- [MCP setup](https://nyc-restaurant-week-mcp.vercel.app/developers): install instructions for Claude, Cursor, and any MCP client
+- [Home](https://nycrestaurantweek.app/): chat with Rick to find a restaurant
+- [Map](https://nycrestaurantweek.app/map): every participating restaurant on a live NYC map with subway lines
+- [MCP setup](https://nycrestaurantweek.app/developers): install instructions for Claude, Cursor, and any MCP client
 
 ## Program rules
 

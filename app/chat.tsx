@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import posthog from "posthog-js";
 import type { RestaurantCard } from "@/lib/format";
 import { Rick } from "./rick";
+import { ShareLink } from "./share-link";
 
 interface Msg {
   role: "user" | "assistant";
@@ -45,6 +47,7 @@ function Cards({ items }: { items: RestaurantCard[] }) {
             {r.menuUrl ? <a href={r.menuUrl} target="_blank" rel="noreferrer">menu</a> : null}
             {r.website ? <a href={r.website} target="_blank" rel="noreferrer">site</a> : null}
             {r.maps ? <a href={r.maps} target="_blank" rel="noreferrer">maps</a> : null}
+            <ShareLink slug={r.slug} />
           </div>
         </div>
       ))}
@@ -139,6 +142,7 @@ function Ask() {
         body: JSON.stringify({ messages: next.map(({ role, content }) => ({ role, content })) }),
       });
       const data = await res.json();
+      posthog.capture("rick_chat_reply", { fallback: Boolean(data.fallback), results: (data.restaurants ?? []).length });
       setMsgs((m) => [
         ...m,
         {

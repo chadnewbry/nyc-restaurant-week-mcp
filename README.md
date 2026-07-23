@@ -8,7 +8,7 @@ An unofficial [MCP](https://modelcontextprotocol.io) server for **NYC Restaurant
 ## Install (Claude Code)
 
 ```sh
-claude mcp add --transport http nyc-restaurant-week https://nyc-restaurant-week-mcp.vercel.app/mcp
+claude mcp add --transport http nyc-restaurant-week https://nycrestaurantweek.app/mcp
 ```
 
 ## Tools

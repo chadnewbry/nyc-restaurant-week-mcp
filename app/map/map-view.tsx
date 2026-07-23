@@ -455,8 +455,8 @@ export function MapView({ pins }: { pins: MapPin[] }) {
           "icon-image": ["get", "emoji"],
           "icon-allow-overlap": true,
           "icon-ignore-placement": true,
-          // Emoji grow with zoom — roughly double from mid to close zoom.
-          "icon-size": ["interpolate", ["linear"], ["zoom"], 13, 0.5, 16, 1.0],
+          // Emoji start at 2x the old base and grow another 50% as you zoom in.
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 13, 1.0, 16, 1.5],
         },
         paint: {
           "icon-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 0, 13.5, 1],

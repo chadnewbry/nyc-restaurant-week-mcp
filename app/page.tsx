@@ -17,6 +17,10 @@ export default function Home() {
             excluded program-wide; sundays vary. drinks, tax, and tip not included.{" "}
             <Link href="/developers">mcp server for developers →</Link>
           </div>
+          <div className="built-by">
+            built by{" "}
+            <a href="https://x.com/chadnewbry" target="_blank" rel="noreferrer">@chadnewbry</a>
+          </div>
         </div>
       </footer>
     </main>

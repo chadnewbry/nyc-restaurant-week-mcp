@@ -432,6 +432,21 @@ export function MapView({ pins }: { pins: MapPin[] }) {
       for (const em of new Set(pins.map((p) => emojiFor(p.cuisines)))) {
         if (!map.hasImage(em)) map.addImage(em, emojiIcon(em), { pixelRatio: 2 });
       }
+      // Zoomed out: simple dots. Zoomed in: cuisine emoji. The two crossfade
+      // across a narrow zoom band so the switch feels smooth.
+      map.addLayer({
+        id: "pin-dots",
+        type: "circle",
+        source: "restaurants",
+        paint: {
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 2.5, 13, 4],
+          "circle-color": "#f2e9dc",
+          "circle-stroke-color": "#000000",
+          "circle-stroke-width": 1,
+          "circle-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 1, 13.5, 0],
+          "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 1, 13.5, 0],
+        },
+      });
       map.addLayer({
         id: "pins",
         type: "symbol",
@@ -440,8 +455,11 @@ export function MapView({ pins }: { pins: MapPin[] }) {
           "icon-image": ["get", "emoji"],
           "icon-allow-overlap": true,
           "icon-ignore-placement": true,
-          // Coins grow with zoom — roughly double from mid to close zoom.
-          "icon-size": ["interpolate", ["linear"], ["zoom"], 9, 0.34, 13, 0.5, 16, 1.0],
+          // Emoji grow with zoom — roughly double from mid to close zoom.
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 13, 0.5, 16, 1.0],
+        },
+        paint: {
+          "icon-opacity": ["interpolate", ["linear"], ["zoom"], 12.5, 0, 13.5, 1],
         },
       });
 
@@ -451,25 +469,27 @@ export function MapView({ pins }: { pins: MapPin[] }) {
         className: "rw-popup",
         offset: 10,
       });
-      map.on("mouseenter", "pins", (e: MapLayerMouseEvent) => {
-        map.getCanvas().style.cursor = "pointer";
-        const f = e.features?.[0];
-        if (f && f.geometry.type === "Point") {
-          popup
-            .setLngLat(f.geometry.coordinates as LngLat)
-            .setText((f.properties.name as string).toLowerCase())
-            .addTo(map);
-        }
-      });
-      map.on("mouseleave", "pins", () => {
-        map.getCanvas().style.cursor = "";
-        popup.remove();
-      });
-      map.on("click", "pins", (e: MapLayerMouseEvent) => {
-        const slug = e.features?.[0]?.properties.slug;
-        const pin = pins.find((p) => p.slug === slug);
-        if (pin) setFocus(pin);
-      });
+      for (const layer of ["pins", "pin-dots"]) {
+        map.on("mouseenter", layer, (e: MapLayerMouseEvent) => {
+          map.getCanvas().style.cursor = "pointer";
+          const f = e.features?.[0];
+          if (f && f.geometry.type === "Point") {
+            popup
+              .setLngLat(f.geometry.coordinates as LngLat)
+              .setText((f.properties.name as string).toLowerCase())
+              .addTo(map);
+          }
+        });
+        map.on("mouseleave", layer, () => {
+          map.getCanvas().style.cursor = "";
+          popup.remove();
+        });
+        map.on("click", layer, (e: MapLayerMouseEvent) => {
+          const slug = e.features?.[0]?.properties.slug;
+          const pin = pins.find((p) => p.slug === slug);
+          if (pin) setFocus(pin);
+        });
+      }
 
       // Rick.
       const el = document.createElement("div");
@@ -547,12 +567,15 @@ export function MapView({ pins }: { pins: MapPin[] }) {
     const map = mapRef.current;
     if (!ready || !map || !map.getLayer("pins")) return;
     if (matched && matched.length) {
-      map.setFilter("pins", ["in", ["get", "slug"], ["literal", matched.map((p) => p.slug)]]);
+      const slugs = matched.map((p) => p.slug);
+      map.setFilter("pins", ["in", ["get", "slug"], ["literal", slugs]]);
+      map.setFilter("pin-dots", ["in", ["get", "slug"], ["literal", slugs]]);
       const b = new LngLatBounds([matched[0].lng, matched[0].lat], [matched[0].lng, matched[0].lat]);
       for (const p of matched) b.extend([p.lng, p.lat]);
       map.fitBounds(b, { padding: 80, duration: 700, maxZoom: 14 });
     } else {
       map.setFilter("pins", null);
+      map.setFilter("pin-dots", null);
     }
   }, [matched, ready]);
 

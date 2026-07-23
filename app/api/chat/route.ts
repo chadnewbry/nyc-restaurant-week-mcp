@@ -1,6 +1,6 @@
 import { generateText, tool, isStepCount, type ModelMessage } from "ai";
 import { z } from "zod";
-import { searchRestaurants, findRestaurant, facets, weekForDate, WEEK_DATES, RESTAURANTS } from "@/lib/data";
+import { searchRestaurants, findRestaurant, facets, weekForDate, WEEK_DATES, RESTAURANTS, type Restaurant } from "@/lib/data";
 import { card, compact, full, type RestaurantCard } from "@/lib/format";
 import { fallbackAnswer } from "@/lib/fallback";
 
@@ -79,14 +79,23 @@ function rateLimited(ip: string): boolean {
   return arr.length > 10;
 }
 
-function cardsFromSlugs(slugs: string[]): RestaurantCard[] {
-  const out: RestaurantCard[] = [];
+// Restaurants Rick actually names in his reply get cards first; remaining
+// search results fill the rest, so his recommendation is never cut off.
+function cardsFromSlugs(slugs: string[], reply: string): RestaurantCard[] {
+  const pool: Restaurant[] = [];
   for (const slug of slugs) {
     const r = RESTAURANTS.find((x) => x.slug === slug);
-    if (r && !out.some((c) => c.slug === slug)) out.push(card(r));
-    if (out.length >= 6) break;
+    if (r && !pool.some((p) => p.slug === slug)) pool.push(r);
   }
-  return out;
+  const norm = (s: string) => s.toLowerCase().replace(/[’‘]/g, "'");
+  const replyNorm = norm(reply);
+  const mentioned = (r: Restaurant) => {
+    const base = norm(r.name.split(" - ")[0]).trim();
+    return base.length >= 3 && replyNorm.includes(base);
+  };
+  return [...pool.filter(mentioned), ...pool.filter((r) => !mentioned(r))]
+    .slice(0, 6)
+    .map(card);
 }
 
 export async function POST(req: Request) {
@@ -136,7 +145,7 @@ export async function POST(req: Request) {
 
     return Response.json({
       reply: result.text || "here's what i found.",
-      restaurants: cardsFromSlugs(slugs),
+      restaurants: cardsFromSlugs(slugs, result.text),
     });
   } catch (err) {
     console.error("chat: gateway failed, using fallback search", err);

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "scrape": "node scripts/scrape.mjs"
+    "scrape": "node scripts/scrape.mjs",
+    "geocode": "node scripts/geocode.mjs",
+    "makemap": "node scripts/make-map.mjs"
   },
   "dependencies": {
     "ai": "^7.0.34",

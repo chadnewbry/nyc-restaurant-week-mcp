@@ -21,6 +21,9 @@ export interface Restaurant {
   website: string | null;
   opentableId: string | null;
   image: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  address?: string | null;
 }
 
 export const RESTAURANTS = restaurantsJson as Restaurant[];
@@ -48,6 +51,15 @@ export function opentableUrl(r: Restaurant): string | null {
   return r.opentableId
     ? `https://www.opentable.com/restref/client/?rid=${r.opentableId}`
     : null;
+}
+
+// Universal Google Maps link. Each Restaurant entry is one physical location
+// (chains have one entry per location), so name + address pins the right spot.
+export function mapsUrl(r: Restaurant): string {
+  const where = r.address
+    ? `${r.name}, ${r.address}, ${r.borough}, NY`
+    : `${r.name}, ${r.neighborhood}, ${r.borough}, NY`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(where)}`;
 }
 
 export interface SearchParams {

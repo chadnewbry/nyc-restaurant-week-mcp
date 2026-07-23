@@ -1,7 +1,7 @@
 // Refreshes data/restaurants.json from the public NYC Tourism program API
 // (the same API the nyctourism.com restaurant-week page calls from the browser).
 // Usage: npm run scrape
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 const API = "https://program-api.nyctourism.com/restaurant-week";
 const KEY = "lTQSe929f34fohKaNq0OH53mdVL0yncvtqmuUG6i"; // public key embedded in nyctourism.com client JS
@@ -69,6 +69,19 @@ for (const r of items) {
     image: img || null,
   });
 }
+// Preserve geocoded coordinates from the previous file (npm run geocode
+// fills them in for new slugs; see scripts/geocode.mjs).
+const FILE = new URL("../data/restaurants.json", import.meta.url);
+let prev = new Map();
+try {
+  prev = new Map(JSON.parse(readFileSync(FILE, "utf8")).map((r) => [r.slug, r]));
+} catch {}
+for (const r of out) {
+  const p = prev.get(r.slug);
+  if (p?.lat != null) Object.assign(r, { lat: p.lat, lng: p.lng, address: p.address });
+}
+
 out.sort((a, b) => (a.name ?? "").toLowerCase().localeCompare((b.name ?? "").toLowerCase()));
-writeFileSync(new URL("../data/restaurants.json", import.meta.url), JSON.stringify(out));
-console.log(`saved ${out.length} restaurants`);
+writeFileSync(FILE, JSON.stringify(out));
+const geocoded = out.filter((r) => r.lat != null).length;
+console.log(`saved ${out.length} restaurants (${geocoded} geocoded — run npm run geocode for the rest)`);

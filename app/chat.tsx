@@ -30,6 +30,10 @@ function Cards({ items }: { items: RestaurantCard[] }) {
     <div className="chat-cards">
       {items.map((r) => (
         <div className="ccard" key={r.slug}>
+          {r.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="photo" src={r.image} alt={r.name} loading="lazy" />
+          ) : null}
           <div className="n">{r.name}</div>
           <div className="m">
             {r.location}
@@ -40,6 +44,7 @@ function Cards({ items }: { items: RestaurantCard[] }) {
             {r.opentable ? <a href={r.opentable} target="_blank" rel="noreferrer">reserve</a> : null}
             {r.menuUrl ? <a href={r.menuUrl} target="_blank" rel="noreferrer">menu</a> : null}
             {r.website ? <a href={r.website} target="_blank" rel="noreferrer">site</a> : null}
+            {r.maps ? <a href={r.maps} target="_blank" rel="noreferrer">maps</a> : null}
           </div>
         </div>
       ))}
@@ -154,6 +159,9 @@ function Ask() {
         <div className="ask-title">ask rick</div>
       </div>
       <div className="ask-sub">612 restaurant week spots. $30 / $45 / $60. jul 20 – sep 6.</div>
+      <div className="map-nav">
+        <a href="/map">[ watch rick run the map ]</a>
+      </div>
 
       <div className="term">
         <div className="term-body">

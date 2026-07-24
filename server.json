@@ -1,0 +1,19 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.chadnewbry/nyc-restaurant-week-mcp",
+  "title": "NYC Restaurant Week",
+  "description": "All 636 NYC Restaurant Week Summer 2026 restaurants — filter by cuisine, borough, price, and date.",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/chadnewbry/nyc-restaurant-week-mcp",
+    "source": "github",
+    "id": "R_kgDOTfzDLA"
+  },
+  "websiteUrl": "https://nycrestaurantweek.app",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://nycrestaurantweek.app/mcp"
+    }
+  ]
+}

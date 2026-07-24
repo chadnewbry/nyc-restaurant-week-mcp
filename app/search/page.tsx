@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { RESTAURANTS } from "@/lib/data";
 import { RickApp } from "../chat";
 
 export const metadata: Metadata = {
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 export default function SearchPage() {
   return (
     <main>
-      <RickApp />
+      <RickApp count={RESTAURANTS.length} />
       <footer>
         <div className="wrap">
           <div className="pixel-note">unofficial fan-made project · not affiliated with nyc tourism + conventions</div>

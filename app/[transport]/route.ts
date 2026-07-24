@@ -6,6 +6,7 @@ import {
   facets,
   weekForDate,
   WEEK_DATES,
+  RESTAURANTS,
 } from "@/lib/data";
 import { compact, full } from "@/lib/format";
 
@@ -19,7 +20,7 @@ const handler = createMcpHandler(
   (server) => {
     server.tool(
       "search_restaurants",
-      "Search the 612 restaurants participating in NYC Restaurant Week Summer 2026 (Jul 20 – Sep 6). All filters are optional and combinable. Prix-fixe tiers are $30 / $45 / $60 for lunch, brunch, or dinner. Saturdays are excluded program-wide; Sunday participation varies. Returns a paginated list with total count — use get_restaurant with a slug for menus, reservation and website links.",
+      `Search the ${RESTAURANTS.length} restaurants participating in NYC Restaurant Week Summer 2026 (Jul 20 – Sep 6). All filters are optional and combinable. Prix-fixe tiers are $30 / $45 / $60 for lunch, brunch, or dinner. Saturdays are excluded program-wide; Sunday participation varies. Returns a paginated list with total count — use get_restaurant with a slug for menus, reservation and website links.`,
       {
         query: z.string().optional().describe("Free-text search over name, description, cuisine, and neighborhood (e.g. 'rooftop', 'omakase', 'steak tribeca')"),
         cuisine: z.string().optional().describe("Cuisine filter, e.g. Italian, Japanese / Sushi, Steakhouse, French, Korean, Mexican, Seafood, Indian, Thai (see list_filters for all 50+)"),

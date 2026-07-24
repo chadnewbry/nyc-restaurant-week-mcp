@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { RESTAURANTS } from "@/lib/data";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -86,7 +87,7 @@ export default function OpengraphImage() {
           ask rick
         </div>
         <div style={{ display: "flex", color: "#b5aa9a", fontSize: 30 }}>
-          nyc restaurant week · jul 20 – sep 6 · 612 spots · $30 / $45 / $60
+          nyc restaurant week · jul 20 – sep 6 · {RESTAURANTS.length} spots · $30 / $45 / $60
         </div>
       </div>
     ),

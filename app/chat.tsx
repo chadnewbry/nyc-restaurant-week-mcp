@@ -113,7 +113,7 @@ function Intro({ onDone }: { onDone: () => void }) {
   );
 }
 
-function Ask() {
+function Ask({ count }: { count: number }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -165,7 +165,7 @@ function Ask() {
         <Rick size={64} />
         <div className="ask-title">ask rick</div>
       </div>
-      <div className="ask-sub">612 restaurant week spots. $30 / $45 / $60. jul 20 – sep 6.</div>
+      <div className="ask-sub">{count} restaurant week spots. $30 / $45 / $60. jul 20 – sep 6.</div>
 
       <div className="term">
         <form
@@ -219,7 +219,7 @@ function Ask() {
   );
 }
 
-export function RickApp() {
+export function RickApp({ count }: { count: number }) {
   const [entered, setEntered] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -237,5 +237,5 @@ export function RickApp() {
       />
     );
   }
-  return <Ask />;
+  return <Ask count={count} />;
 }

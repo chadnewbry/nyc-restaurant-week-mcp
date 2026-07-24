@@ -1,6 +1,6 @@
 # NYC Restaurant Week MCP
 
-An unofficial [MCP](https://modelcontextprotocol.io) server for **NYC Restaurant Week Summer 2026** (Jul 20 – Sep 6). Gives Claude, Cursor, or any MCP client searchable access to all 612 participating restaurants — cuisine, borough/neighborhood, $30/$45/$60 prix-fixe tiers, participating weeks, Sunday availability, menu PDFs, and OpenTable reservation links.
+An unofficial [MCP](https://modelcontextprotocol.io) server for **NYC Restaurant Week Summer 2026** (Jul 20 – Sep 6). Gives Claude, Cursor, or any MCP client searchable access to all 636 participating restaurants — cuisine, borough/neighborhood, $30/$45/$60 prix-fixe tiers, participating weeks, Sunday availability, menu PDFs, and OpenTable reservation links.
 
 - **Site:** `/` — promo landing page
 - **MCP endpoint:** `/mcp` — Streamable HTTP, no auth

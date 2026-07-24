@@ -4,3 +4,9 @@ node_modules
 .env*
 *.tsbuildinfo
 /public/vendor/
+
+# Launch/PR working notes — private, not for the public repo
+LAUNCH.md
+hn-post.md
+pitch-newsletters.md
+reddit-post.md

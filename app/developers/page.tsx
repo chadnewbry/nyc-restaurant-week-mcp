@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { RESTAURANTS } from "@/lib/data";
 import { CopyButton } from "../copy-button";
+
+const COUNT = RESTAURANTS.length;
 
 export const metadata: Metadata = {
   title: "MCP Server — ask rick",
   description:
-    "Free open MCP server for NYC Restaurant Week Summer 2026. Connect Claude, Cursor, or any MCP client to 612 participating restaurants.",
+    `Free open MCP server for NYC Restaurant Week Summer 2026. Connect Claude, Cursor, or any MCP client to ${COUNT} participating restaurants.`,
 };
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://nycrestaurantweek.app";
@@ -28,7 +31,7 @@ const CURSOR_CONFIG = `{
 }`;
 
 const TOOLS = [
-  { name: "search_restaurants", desc: "Filter all 612 participants by cuisine, borough, neighborhood, price tier, meal, program week, exact date, curated collection, or free text. Paginated." },
+  { name: "search_restaurants", desc: `Filter all ${COUNT} participants by cuisine, borough, neighborhood, price tier, meal, program week, exact date, curated collection, or free text. Paginated.` },
   { name: "get_restaurant", desc: "Full detail on one spot: every prix-fixe offer, participating weeks, the Restaurant Week menu PDF, website, and a direct OpenTable reservation link." },
   { name: "check_date", desc: "Give it a date and it tells you if Restaurant Week is on, which program week it is, and the Saturday/Sunday rules that apply." },
   { name: "list_filters", desc: "Every cuisine, neighborhood, collection, and price tier with live participant counts — so your AI never guesses at filter values." },

@@ -20,8 +20,8 @@ Tools:
 
 ## Pages
 
-- [Home](https://nycrestaurantweek.app/): chat with Rick to find a restaurant
-- [Map](https://nycrestaurantweek.app/map): every participating restaurant on a live NYC map with subway lines
+- [Home / Map](https://nycrestaurantweek.app/): every participating restaurant on a live NYC map with subway lines
+- [Search](https://nycrestaurantweek.app/search): chat with Rick to find a restaurant
 - [MCP setup](https://nycrestaurantweek.app/developers): install instructions for Claude, Cursor, and any MCP client
 
 ## Program rules

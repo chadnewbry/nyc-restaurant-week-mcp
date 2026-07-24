@@ -1,28 +1,20 @@
-import Link from "next/link";
-import { RickApp } from "./chat";
+import type { Metadata } from "next";
+import { RESTAURANTS } from "@/lib/data";
+import { card } from "@/lib/format";
+import { MapView, type MapPin } from "./map/map-view";
+
+export const metadata: Metadata = {
+  title: "rick's map — NYC Restaurant Week",
+  description:
+    "A live map of every NYC Restaurant Week spot on real NYC cartography — subway lines included. Watch Rick the rat walk, citibike, cab, and ride the train to your pick.",
+};
 
 export default function Home() {
-  return (
-    <main>
-      <RickApp />
-      <footer>
-        <div className="wrap">
-          <div className="pixel-note">unofficial fan-made project · not affiliated with nyc tourism + conventions</div>
-          <div className="fine">
-            data from public listings at{" "}
-            <a href="https://www.nyctourism.com/restaurant-week/" target="_blank" rel="noreferrer">
-              nyctourism.com/restaurant-week
-            </a>
-            . prices and participation can change — always confirm with the restaurant. saturdays
-            excluded program-wide; sundays vary. drinks, tax, and tip not included.{" "}
-            <Link href="/developers">mcp server for developers →</Link>
-          </div>
-          <div className="built-by">
-            built by{" "}
-            <a href="https://x.com/chadnewbry" target="_blank" rel="noreferrer">@chadnewbry</a>
-          </div>
-        </div>
-      </footer>
-    </main>
-  );
+  const pins: MapPin[] = RESTAURANTS.filter((r) => r.lat != null && r.lng != null).map((r) => {
+    const { summary, weeks, ...rest } = card(r);
+    void summary;
+    void weeks;
+    return { ...rest, lat: r.lat!, lng: r.lng! };
+  });
+  return <MapView pins={pins} />;
 }

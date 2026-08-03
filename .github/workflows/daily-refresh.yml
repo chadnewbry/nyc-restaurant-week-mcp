@@ -1,9 +1,9 @@
 # Daily data refresh: re-scrape the program API, geocode any new restaurants
-# (detail-page coordinates with a Nominatim name-search fallback), commit the
-# updated data, and redeploy to Vercel.
+# (detail-page coordinates with a Nominatim name-search fallback), and commit
+# the updated data.
 #
-# Requires one repo secret: VERCEL_TOKEN (create at vercel.com/account/tokens,
-# add under Settings → Secrets and variables → Actions).
+# No deploy step needed: Vercel's Git integration builds production on every
+# push to main, so the commit below is what ships the new data.
 name: daily-refresh
 
 on:
@@ -29,26 +29,16 @@ jobs:
       - name: Geocode new restaurants
         run: npm run geocode
       - name: Commit data changes
-        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if git diff --quiet data/restaurants.json; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No data changes."
           else
             git add data/restaurants.json
             git commit -m "Daily data refresh: restaurants + geocoding"
             git push
-            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: Deploy to Vercel
-        if: steps.commit.outputs.changed == 'true'
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: team_gbov9DBySawsDmV9bBOAKSBw
-          VERCEL_PROJECT_ID: prj_WGlL1b22nBDF7F7cH2uq1MiCAtiD
-        run: npx vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
       # A failed refresh is silent otherwise (site keeps serving last-good
       # data). File/bump an issue so it shows up in GitHub notifications —
       # most likely cause: NYC Tourism rotated the API key or changed the API.
